@@ -130,6 +130,12 @@ namespace MikuMikuLibrary.Textures
 
         private void Init( int width, int height, TextureFormat format, int depth, int mipMapCount )
         {
+            if ( width < 1 )
+                width = 1;
+
+            if ( height < 1 )
+                height = 1;
+
             if ( depth < 1 )
                 depth = 1;
 

@@ -1,4 +1,6 @@
-﻿namespace MikuMikuLibrary.Textures
+﻿using System;
+
+namespace MikuMikuLibrary.Textures
 {
     public enum TextureFormat
     {
@@ -13,24 +15,18 @@
 
     public static class TextureFormatUtilities
     {
-        public static int GetBitsPerPixel( TextureFormat format )
+        public static int GetBlockSize( TextureFormat format )
         {
             switch ( format )
             {
-                case TextureFormat.RGB:
-                    return 24;
-
-                case TextureFormat.RGBA:
-                    return 32;
-
                 case TextureFormat.DXT1:
                 case TextureFormat.ATI1:
-                    return 4;
+                    return 8;
 
                 case TextureFormat.DXT3:
                 case TextureFormat.DXT5:
                 case TextureFormat.ATI2:
-                    return 8;
+                    return 16;
             }
 
             return 0;
@@ -38,7 +34,17 @@
 
         public static int CalculateDataSize( int width, int height, TextureFormat format )
         {
-            return ( ( width * height ) * GetBitsPerPixel( format ) ) / 8;
+            switch ( format )
+            {
+                case TextureFormat.RGB:
+                    return width * height * 3;
+
+                case TextureFormat.RGBA:
+                    return width * height * 4;
+
+                default:
+                    return Math.Max( 1, ( width + 3 ) / 4 ) * Math.Max( 1, ( height + 3 ) / 4 ) * GetBlockSize( format );
+            }
         }
     }
 }
