@@ -309,6 +309,12 @@ namespace MikuMikuLibrary.IO
             this.offsetWriteQueue.Clear();
         }
 
+        public void DoEnqueuedOffsetWritesReversed()
+        {
+            offsetWriteQueue = new Queue<OffsetWrite>( offsetWriteQueue.Reverse() );
+            DoEnqueuedOffsetWrites();
+        }
+
         public void PushStringTable( StringBinaryFormat format, int fixedLength = -1 )
         {
             stringTableStack.Push( new StringTable
