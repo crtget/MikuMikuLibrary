@@ -188,7 +188,7 @@ namespace MikuMikuLibrary.IO
             body.Invoke();
         }
 
-        public void WriteAtOffsetThenSeekBack( long offset, Action body )
+        public void WriteAtOffsetAndSeekBack( long offset, Action body )
         {
             long previousOffset = Position;
 
