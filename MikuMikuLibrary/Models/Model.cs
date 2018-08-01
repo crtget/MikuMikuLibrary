@@ -34,6 +34,9 @@ namespace MikuMikuLibrary.Models
             using ( var reader = new EndianBinaryReader( source, Encoding.UTF8, true, Endianness.LittleEndian ) )
             {
                 uint signature = reader.ReadUInt32();
+                if ( signature != 0x5062500 )
+                    throw new InvalidDataException( "Invalid signature (expected 0x5062500)" );
+
                 int meshCount = reader.ReadInt32();
                 int globalBoneCount = reader.ReadInt32();
                 uint meshesOffset = reader.ReadUInt32();
