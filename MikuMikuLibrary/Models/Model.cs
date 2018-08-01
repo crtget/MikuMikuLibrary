@@ -26,14 +26,7 @@ namespace MikuMikuLibrary.Models
 
         public int BoneCount
         {
-            get
-            {
-                var ids = new List<int>();
-                foreach ( var mesh in Meshes )
-                    ids.AddRange( mesh.Bones.Select( x => x.ID ) );
-
-                return ids.Distinct().Count();
-            }
+            get { return Meshes.SelectMany( x => x.Bones.Select( y => y.ID ) ).Distinct().Count(); }
         }
 
         protected override void InternalRead( Stream source )
