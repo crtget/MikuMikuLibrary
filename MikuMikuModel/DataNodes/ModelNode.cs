@@ -94,6 +94,21 @@ namespace MikuMikuModel.DataNodes
                 foreach ( var material in Data.Meshes.SelectMany( x => x.Materials ) )
                     material.Shader = "BLINN";
             } );
+            RegisterCustomHandler( "Convert triangles to triangle strips", () =>
+            {
+                foreach ( var indexTable in Data.Meshes.SelectMany( x => x.SubMeshes ).SelectMany( x => x.IndexTables ) )
+                {
+                    if ( indexTable.PrimitiveType == IndexTablePrimitiveType.Triangles )
+                    {
+                        ushort[] triangleStrip = TriangleStripUtilities.GenerateStrips( indexTable.Indices );
+                        if ( triangleStrip != null )
+                        {
+                            indexTable.PrimitiveType = IndexTablePrimitiveType.TriangleStrip;
+                            indexTable.Indices = triangleStrip;
+                        }
+                    }
+                }
+            } );
         }
 
         protected override void InitializeViewCore()
