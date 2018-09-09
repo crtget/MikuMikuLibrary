@@ -277,5 +277,10 @@ namespace MikuMikuModel.GUI.Forms
         {
             MessageBox.Show( "MikuMikuModel by Skyth\nThis program is a work in progress." );
         }
+
+        private void OnPropertyValueChanged( object s, PropertyValueChangedEventArgs e )
+        {
+            treeView.SelectedDataNode?.NotifyPropertyChanged( e.ChangedItem.Label );
+        }
     }
 }

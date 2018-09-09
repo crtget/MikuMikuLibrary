@@ -442,7 +442,7 @@ namespace MikuMikuModel.DataNodes
                 nodes.First().Remove();
         }
 
-        protected void NotifyPropertyChanged( [CallerMemberName]string propertyName = null )
+        public void NotifyPropertyChanged( [CallerMemberName]string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
             HasPendingChanges = true;
