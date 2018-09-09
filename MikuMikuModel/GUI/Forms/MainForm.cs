@@ -113,7 +113,7 @@ namespace MikuMikuModel.GUI.Forms
 
         public void Reset()
         {
-            treeView.SelectedDataNode?.Dispose();
+            treeView.TopDataNode?.Dispose();
             treeView.Nodes.Clear();
 
             propertyGrid.SelectedObject = null;

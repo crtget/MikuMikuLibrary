@@ -123,7 +123,7 @@ namespace MikuMikuModel.DataNodes
         public virtual bool HasPendingChanges
         {
             get { return hasPendingChanges; }
-            private set
+            protected set
             {
                 // Don't want node constructions
                 // to affect this flag

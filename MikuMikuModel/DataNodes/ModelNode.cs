@@ -93,6 +93,8 @@ namespace MikuMikuModel.DataNodes
             {
                 foreach ( var material in Data.Meshes.SelectMany( x => x.Materials ) )
                     material.Shader = "BLINN";
+
+                HasPendingChanges = true;
             } );
             RegisterCustomHandler( "Convert triangles to triangle strips", () =>
             {
@@ -108,6 +110,8 @@ namespace MikuMikuModel.DataNodes
                         }
                     }
                 }
+
+                HasPendingChanges = true;
             } );
         }
 
