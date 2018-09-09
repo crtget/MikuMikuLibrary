@@ -235,20 +235,7 @@ namespace MikuMikuModel.DataNodes
                 if ( oldMesh != null )
                 {
                     if ( mesh.Skin != null && mesh.Skin.ExData == null )
-                    {
                         mesh.Skin.ExData = oldMesh.Skin?.ExData;
-
-                        // Also pass the IDs of exdata bones, since they don't exist in bone databases at all
-                        if ( mesh.Skin.ExData != null )
-                        {
-                            foreach ( var exBone in oldMesh.Skin.Bones.Where( x => ( x.ID & 0x8000 ) != 0 ) )
-                            {
-                                var newExBone = mesh.Skin.Bones.FirstOrDefault( x => x.Name.Equals( exBone.Name, StringComparison.OrdinalIgnoreCase ) );
-                                if ( newExBone != null )
-                                    newExBone.ID = exBone.ID;
-                            }
-                        }
-                    }
 
                     mesh.Name = oldMesh.Name;
                     mesh.ID = oldMesh.ID;
