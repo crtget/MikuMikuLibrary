@@ -1,11 +1,10 @@
 ﻿using MikuMikuLibrary.Textures.DDS;
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace MikuMikuLibrary.Textures
 {
