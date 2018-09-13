@@ -5,6 +5,7 @@ using MikuMikuLibrary.Misc;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Linq;
 
 namespace MikuMikuLibrary.Models
 {
@@ -105,6 +106,7 @@ namespace MikuMikuLibrary.Models
                 {
                     Vertices = new Vector3[ vertexCount ];
                     Normals = new Vector3[ vertexCount ];
+                    Tangents = new Vector4[ vertexCount ];
                     UVChannel1 = new Vector2[ vertexCount ];
                     UVChannel2 = new Vector2[ vertexCount ];
                     Colors = new Color[ vertexCount ];
@@ -112,13 +114,18 @@ namespace MikuMikuLibrary.Models
                     if ( mode == 4 )
                         BoneWeights = new BoneWeight[ vertexCount ];
 
+                    bool hasTangents = false;
+                    bool hasUVChannel2 = false;
+                    bool hasColors = false;
+
                     var vertexReader = section.VertexData.Reader;
                     for ( int i = 0; i < vertexCount; i++ )
                     {
                         vertexReader.SeekBegin( dataOffset + ( stride * i ) );
                         Vertices[ i ] = vertexReader.ReadVector3();
                         Normals[ i ] = vertexReader.ReadVector3Int16();
-                        vertexReader.SeekCurrent( 10 );
+                        vertexReader.SeekCurrent( 2 );
+                        Tangents[ i ] = vertexReader.ReadVector4Int16();
                         UVChannel1[ i ] = vertexReader.ReadVector2Half();
                         UVChannel2[ i ] = vertexReader.ReadVector2Half();
                         Colors[ i ] = vertexReader.ReadColorHalf();
@@ -140,7 +147,20 @@ namespace MikuMikuLibrary.Models
 
                             BoneWeights[ i ] = boneWeight;
                         }
+
+                        // Normalize normal because precision
+                        Normals[ i ] = Vector3.Normalize( Normals[ i ] );
+
+                        // Checks to get rid of useless data after reading
+                        if ( Tangents[ i ] != Vector4.Zero ) hasTangents = true;
+                        if ( UVChannel1[ i ] != UVChannel2[ i ] ) hasUVChannel2 = true;
+                        if ( !Colors[ i ].Equals( Color.One ) ) hasColors = true;
                     }
+
+                    // Always remove tangents for now
+                    if ( !hasTangents || true ) Tangents = null;
+                    if ( !hasUVChannel2 ) UVChannel2 = null;
+                    if ( !hasColors ) Colors = null;
                 }
             }
 
