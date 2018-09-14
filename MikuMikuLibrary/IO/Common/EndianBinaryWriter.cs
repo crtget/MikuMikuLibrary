@@ -394,18 +394,10 @@ namespace MikuMikuLibrary.IO.Common
 
         public void PushStringTable( StringBinaryFormat format, int fixedLength = -1 )
         {
-            stringTableStack.Push( new StringTable
-            {
-                BaseOffset = baseOffsetStack.Count > 0 ? baseOffsetStack.Peek() : 0,
-                Strings = new Dictionary<string, List<long>>(),
-                AlignmentKind = AlignmentKind.None,
-                Alignment = 0,
-                Format = format,
-                FixedLength = fixedLength,
-            } );
+            PushStringTable( 0, AlignmentKind.None, format, fixedLength );
         }
 
-        public void PushStringTableAligned( int alignment, AlignmentKind alignmentKind, StringBinaryFormat format, int fixedLength = -1 )
+        public void PushStringTable( int alignment, AlignmentKind alignmentKind, StringBinaryFormat format, int fixedLength = -1 )
         {
             stringTableStack.Push( new StringTable
             {
