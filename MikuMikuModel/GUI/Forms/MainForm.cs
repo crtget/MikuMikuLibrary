@@ -272,6 +272,11 @@ namespace MikuMikuModel.GUI.Forms
             using ( var configurationsForm = new ConfigurationForm() )
                 configurationsForm.ShowDialog( this );
         }
+        
+        private void OnHelp(object sender, EventArgs e)
+        {
+            Process.Start("https://github.com/blueskythlikesclouds/MikuMikuLibrary/wiki/Miku-Miku-Model");
+        }
 
         private void OnAbout( object sender, EventArgs e )
         {
