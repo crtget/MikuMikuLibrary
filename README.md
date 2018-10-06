@@ -28,5 +28,5 @@ It includes:
 ### FARC Pack
 This program can extract .farc files or create one from a folder.
 
-## TXP Converter
+### TXP Converter
 This program allows you to modify _tex.bin files by extracting them to .dds or .png files.
