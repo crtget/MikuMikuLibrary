@@ -353,7 +353,7 @@ namespace MikuMikuLibrary.Models
                     }
                 }
                 
-                indexTable.Indices = aiMesh.Faces.Where( x => x.IndexCount == 3 ).SelectMany( x => x.Indices ).Select( x => vertexOffset + x ).ToArray();
+                indexTable.Indices = aiMesh.Faces.Where( x => x.IndexCount == 3 ).SelectMany( x => x.Indices ).Select( x => ( ushort )( vertexOffset + x ) ).ToArray();
                 
                 ushort[] triangleStrip = TriangleStripUtilities.GenerateStrips( indexTable.Indices );
                 if ( triangleStrip != null )
