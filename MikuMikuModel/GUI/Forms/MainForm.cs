@@ -6,9 +6,9 @@ using MikuMikuModel.FormatModules;
 using MikuMikuModel.GUI.Controls;
 using System;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
-using System.Diagnostics;
 
 namespace MikuMikuModel.GUI.Forms
 {
@@ -105,6 +105,25 @@ namespace MikuMikuModel.GUI.Forms
         {
             ConfigurationList.Instance.Save();
             base.OnFormClosed( e );
+        }
+
+        protected override void OnDragEnter( DragEventArgs drgevent )
+        {
+            if ( drgevent.Data.GetDataPresent( DataFormats.FileDrop ) )
+                drgevent.Effect = DragDropEffects.Copy;
+            else
+                drgevent.Effect = DragDropEffects.None;
+
+            base.OnDragEnter( drgevent );
+        }
+
+        protected override void OnDragDrop( DragEventArgs drgevent )
+        {
+            string[] filePaths = ( string[] )drgevent.Data.GetData( DataFormats.FileDrop, false );
+            if ( filePaths.Length >= 1 && !AskForSavingChanges() )
+                OpenFile( filePaths[ 0 ] );
+
+            base.OnDragDrop( drgevent );
         }
 
         private void OnNodeClose( object sender, EventArgs e )
@@ -279,9 +298,9 @@ namespace MikuMikuModel.GUI.Forms
             MessageBox.Show( "MikuMikuModel by Skyth\nThis program is a work in progress." );
         }
 
-        private void OnHelp(object sender, EventArgs e)
+        private void OnHelp( object sender, EventArgs e )
         {
-            Process.Start("https://github.com/blueskythlikesclouds/MikuMikuLibrary/wiki/Miku-Miku-Model");
+            Process.Start( "https://github.com/blueskythlikesclouds/MikuMikuLibrary/wiki/Miku-Miku-Model" );
         }
 
         private void OnPropertyValueChanged( object s, PropertyValueChangedEventArgs e )
