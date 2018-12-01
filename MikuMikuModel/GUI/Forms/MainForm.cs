@@ -191,6 +191,9 @@ namespace MikuMikuModel.GUI.Forms
 
             // Update the file path for the save method
             currentlyOpenFilePath = filePath;
+
+            // Expand the node
+            wrappedNode.Expand();
         }
 
         private void SaveFile( string filePath )
