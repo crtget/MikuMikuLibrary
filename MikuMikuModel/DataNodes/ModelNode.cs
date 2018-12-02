@@ -30,15 +30,6 @@ namespace MikuMikuModel.DataNodes
             }
         }
 
-        public override Control Control
-        {
-            get
-            {
-                ModelViewControl.Instance.SetModel( Data, TextureNode.GlobalTextureSet );
-                return ModelViewControl.Instance;
-            }
-        }
-
         public override Bitmap Icon
         {
             get { return Properties.Resources.Model; }
