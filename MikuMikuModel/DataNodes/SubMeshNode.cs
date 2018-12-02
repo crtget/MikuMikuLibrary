@@ -20,15 +20,6 @@ namespace MikuMikuModel.DataNodes
             get { return DataNodeActionFlags.Move | DataNodeActionFlags.Remove | DataNodeActionFlags.Rename; }
         }
 
-        public override Control Control
-        {
-            get
-            {
-                ModelViewControl.Instance.SetModel( Data, FindParent<Mesh>().Data, TextureNode.GlobalTextureSet );
-                return ModelViewControl.Instance;
-            }
-        }
-
         [DisplayName( "Bounding Sphere" )]
         public BoundingSphere BoundingSphere
         {
