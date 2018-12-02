@@ -23,16 +23,7 @@ namespace MikuMikuModel.DataNodes
                   DataNodeActionFlags.Remove | DataNodeActionFlags.Rename | DataNodeActionFlags.Replace;
             }
         }
-
-        public override Control Control
-        {
-            get
-            {
-                ModelViewControl.Instance.SetModel( Data, TextureNode.GlobalTextureSet );
-                return ModelViewControl.Instance;
-            }
-        }
-
+        
         public override Bitmap Icon
         {
             get { return Properties.Resources.Mesh; }
