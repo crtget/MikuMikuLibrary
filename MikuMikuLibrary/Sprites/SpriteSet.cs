@@ -14,6 +14,7 @@ namespace MikuMikuLibrary.Sprites
         }
 
         public List<Sprite> Sprites { get; }
+
         public TextureSet TextureSet { get; }
 
         public override void Read( EndianBinaryReader reader, Section section = null )
@@ -34,7 +35,11 @@ namespace MikuMikuLibrary.Sprites
             {
                 for ( int i = 0; i < spriteCount; i++ )
                 {
-                    var sprite = new Sprite();
+                    var sprite = new Sprite()
+                    {
+                        ParentTextureSet = TextureSet,
+                    };
+
                     sprite.ReadFirst( reader );
                     Sprites.Add( sprite );
                 }

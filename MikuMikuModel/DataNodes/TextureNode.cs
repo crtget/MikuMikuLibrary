@@ -51,18 +51,16 @@ namespace MikuMikuModel.DataNodes
 
         protected override void InitializeCore()
         {
-            RegisterExportHandler<Texture>( ( path ) => TextureDecoder.DecodeToDDS( Data, path ) );
             RegisterExportHandler<Bitmap>( ( path ) => TextureDecoder.Decode( Data ).Save( path ) );
-            RegisterReplaceHandler<Texture>( TextureEncoder.Encode );
+            RegisterExportHandler<Texture>( ( path ) => TextureDecoder.DecodeToDDS( Data, path ) );
+
             RegisterReplaceHandler<Bitmap>( ( path ) =>
             {
                 using ( var bitmap = new Bitmap( path ) )
                 {
                     if ( Data.IsYCbCr )
                     {
-                        var format = TextureFormat.RGB;
-                        if ( DDSCodec.HasTransparency( bitmap ) )
-                            format = TextureFormat.RGBA;
+                        var format = DDSCodec.HasTransparency(bitmap) ? TextureFormat.RGBA : TextureFormat.RGB;
 
                         return TextureEncoder.Encode( bitmap, format, false );
                     }
@@ -70,6 +68,7 @@ namespace MikuMikuModel.DataNodes
                     return TextureEncoder.Encode( bitmap, Data.Format, Data.MipMapCount != 0 );
                 }
             } );
+            RegisterReplaceHandler<Texture>( TextureEncoder.Encode );
         }
 
         protected override void InitializeViewCore()
