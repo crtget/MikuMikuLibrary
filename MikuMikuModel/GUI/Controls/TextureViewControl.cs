@@ -171,7 +171,7 @@ namespace MikuMikuModel.GUI.Controls
 
         public void SetSprite(Sprite sprite)
         {
-            // This is not the most efficiant way of doing this
+            // This is not the most efficient way of doing this
             // so we might wanna use an openGL control instead 
             // which we'll have to do anyway if we want to render aets cirComfy
 

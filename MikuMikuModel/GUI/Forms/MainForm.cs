@@ -8,6 +8,7 @@ using System;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MikuMikuModel.GUI.Forms
@@ -16,27 +17,27 @@ namespace MikuMikuModel.GUI.Forms
     {
         private string currentlyOpenFilePath;
 
-        private void OnOpen( object sender, EventArgs e )
+        private void OnOpen(object sender, EventArgs e)
         {
             OpenFile();
         }
 
-        private void OnSave( object sender, EventArgs e )
+        private void OnSave(object sender, EventArgs e)
         {
             SaveFile();
         }
 
-        private void OnSaveAs( object sender, EventArgs e )
+        private void OnSaveAs(object sender, EventArgs e)
         {
             SaveFileAs();
         }
 
-        private void OnExit( object sender, EventArgs e )
+        private void OnExit(object sender, EventArgs e)
         {
             Close();
         }
 
-        private void OnAfterSelect( object sender, TreeViewEventArgs e )
+        private void OnAfterSelect(object sender, TreeViewEventArgs e)
         {
             // Set the property grid's selected object to the tag, which is a IDataNode
             propertyGrid.SelectedObject = treeView.SelectedDataNode.Data;
@@ -45,27 +46,27 @@ namespace MikuMikuModel.GUI.Forms
             mainSplitContainer.Panel1.Controls.Clear();
 
             Control control;
-            if ( ( control = treeView.ControlOfSelectedDataNode ) != null )
+            if ((control = treeView.ControlOfSelectedDataNode) != null)
             {
                 control.Dock = DockStyle.Fill;
-                mainSplitContainer.Panel1.Controls.Add( control );
+                mainSplitContainer.Panel1.Controls.Add(control);
             }
         }
 
-        private bool CheckKeyPressRecursively( object item, Keys keys )
+        private bool CheckKeyPressRecursively(object item, Keys keys)
         {
-            if ( item is ToolStripMenuItem menuItem )
+            if (item is ToolStripMenuItem menuItem)
             {
-                if ( menuItem.ShortcutKeys == keys )
+                if (menuItem.ShortcutKeys == keys)
                 {
                     menuItem.PerformClick();
                     return true;
                 }
                 else
                 {
-                    foreach ( var subItem in menuItem.DropDownItems )
+                    foreach (var subItem in menuItem.DropDownItems)
                     {
-                        if ( CheckKeyPressRecursively( subItem, keys ) )
+                        if (CheckKeyPressRecursively(subItem, keys))
                             return true;
                     }
                 }
@@ -74,59 +75,75 @@ namespace MikuMikuModel.GUI.Forms
             return false;
         }
 
-        protected override bool ProcessCmdKey( ref Message msg, Keys keyData )
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            foreach ( var menuItem in menuStrip.Items )
+            foreach (var menuItem in menuStrip.Items)
             {
-                if ( CheckKeyPressRecursively( menuItem, keyData ) )
+                if (CheckKeyPressRecursively(menuItem, keyData))
                     return true;
             }
 
             var strip = treeView.SelectedNode?.ContextMenuStrip;
-            if ( strip != null )
+            if (strip != null)
             {
-                foreach ( var menuItem in strip.Items )
+                foreach (var menuItem in strip.Items)
                 {
-                    if ( CheckKeyPressRecursively( menuItem, keyData ) )
+                    if (CheckKeyPressRecursively(menuItem, keyData))
                         return true;
                 }
             }
 
-            return base.ProcessCmdKey( ref msg, keyData );
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
-        protected override void OnFormClosing( FormClosingEventArgs e )
+        protected override void OnFormClosing(FormClosingEventArgs e)
         {
             e.Cancel = AskForSavingChanges();
-            base.OnFormClosing( e );
+            base.OnFormClosing(e);
         }
 
-        protected override void OnFormClosed( FormClosedEventArgs e )
+        protected override void OnFormClosed(FormClosedEventArgs e)
         {
             ConfigurationList.Instance.Save();
-            base.OnFormClosed( e );
+            base.OnFormClosed(e);
         }
 
-        protected override void OnDragEnter( DragEventArgs drgevent )
+        protected override void OnDragEnter(DragEventArgs drgevent)
         {
-            if ( drgevent.Data.GetDataPresent( DataFormats.FileDrop ) )
+            if (drgevent.Data.GetDataPresent(DataFormats.FileDrop))
                 drgevent.Effect = DragDropEffects.Copy;
             else
                 drgevent.Effect = DragDropEffects.None;
 
-            base.OnDragEnter( drgevent );
+            base.OnDragEnter(drgevent);
         }
 
-        protected override void OnDragDrop( DragEventArgs drgevent )
+        protected override void OnDragDrop(DragEventArgs drgevent)
         {
-            string[] filePaths = ( string[] )drgevent.Data.GetData( DataFormats.FileDrop, false );
-            if ( filePaths.Length >= 1 && !AskForSavingChanges() )
-                OpenFile( filePaths[ 0 ] );
+            string[] filePaths = (string[])drgevent.Data.GetData(DataFormats.FileDrop, false);
 
-            base.OnDragDrop( drgevent );
+            if (filePaths.Length >= 1 && !AskForSavingChanges())
+            {
+                string filePath = filePaths[0];
+
+                // just a quick test
+                bool isDirectory = false; // System.IO.Directory.Exists(filePath);
+
+                if (isDirectory)
+                {
+                    foreach (var file in System.IO.Directory.GetFiles(filePath, "*.*", System.IO.SearchOption.AllDirectories))
+                        treeView.Nodes.Add(new DataTreeNode(DataNodeFactory.Create(file)));
+                }
+                else
+                {
+                    OpenFile(filePath);
+                }
+            }
+
+            base.OnDragDrop(drgevent);
         }
 
-        private void OnNodeClose( object sender, EventArgs e )
+        private void OnNodeClose(object sender, EventArgs e)
         {
             CloseFile();
         }
@@ -151,35 +168,36 @@ namespace MikuMikuModel.GUI.Forms
 
         public void OpenFile()
         {
-            using ( var dialog = new OpenFileDialog() )
+            using (var dialog = new OpenFileDialog())
             {
                 dialog.AutoUpgradeEnabled = true;
                 dialog.CheckFileExists = true;
                 dialog.CheckPathExists = true;
                 dialog.Filter = FormatModuleUtilities.GetFilter(
-                    FormatModuleRegistry.ModelTypes.Where( x => typeof( IBinaryFile ).IsAssignableFrom( x ) && x.IsClass && !x.IsAbstract ), FormatModuleFlags.Import );
+                    FormatModuleRegistry.ModelTypes.Where(x => typeof(IBinaryFile).IsAssignableFrom(x) && x.IsClass && !x.IsAbstract), FormatModuleFlags.Import);
                 dialog.Title = "Select a file to open.";
                 dialog.ValidateNames = true;
                 dialog.AddExtension = true;
 
-                if ( dialog.ShowDialog() == DialogResult.OK )
-                    OpenFile( dialog.FileName );
+                if (dialog.ShowDialog() == DialogResult.OK)
+                    OpenFile(dialog.FileName);
             }
         }
 
-        public void OpenFile( string filePath )
+        public void OpenFile(string filePath, bool reset = true)
         {
-            Reset();
+            if (reset)
+                Reset();
 
             // Determine current configuration
-            ConfigurationList.Instance.DetermineCurrentConfiguration( filePath );
+            ConfigurationList.Instance.DetermineCurrentConfiguration(filePath);
 
             // Create the node
-            var node = DataNodeFactory.Create( filePath );
+            var node = DataNodeFactory.Create(filePath);
 
             // Wrap the node and add it to the tree view
-            var wrappedNode = new DataTreeNode( node );
-            treeView.Nodes.Add( wrappedNode );
+            var wrappedNode = new DataTreeNode(node);
+            treeView.Nodes.Add(wrappedNode);
 
             // Restore menu items
             saveToolStripMenuItem.Enabled = true;
@@ -193,31 +211,32 @@ namespace MikuMikuModel.GUI.Forms
             currentlyOpenFilePath = filePath;
 
             // Expand the node
+            // TODO: Expanding a large farc archive will lock up the program
             wrappedNode.Expand();
         }
 
-        private void SaveFile( string filePath )
+        private void SaveFile(string filePath)
         {
-            if ( treeView.TopDataNode == null )
+            if (treeView.TopDataNode == null)
                 return;
 
-            treeView.TopDataNode.Export( filePath );
+            treeView.TopDataNode.Export(filePath);
 
             // Save the texture database
             ConfigurationList.Instance.CurrentConfiguration?.TextureDatabase?.Save(
-                ConfigurationList.Instance.CurrentConfiguration?.TextureDatabaseFilePath );
+                ConfigurationList.Instance.CurrentConfiguration?.TextureDatabaseFilePath);
 
             currentlyOpenFilePath = filePath;
         }
 
         private bool SaveFile()
         {
-            if ( treeView.TopDataNode == null )
+            if (treeView.TopDataNode == null)
                 return false;
 
-            if ( !string.IsNullOrEmpty( currentlyOpenFilePath ) )
+            if (!string.IsNullOrEmpty(currentlyOpenFilePath))
             {
-                SaveFile( currentlyOpenFilePath );
+                SaveFile(currentlyOpenFilePath);
                 return true;
             }
 
@@ -227,7 +246,7 @@ namespace MikuMikuModel.GUI.Forms
         private bool SaveFileAs()
         {
             var path = treeView.TopDataNode?.Export();
-            if ( string.IsNullOrEmpty( path ) )
+            if (string.IsNullOrEmpty(path))
                 return false;
 
             currentlyOpenFilePath = path;
@@ -239,16 +258,16 @@ namespace MikuMikuModel.GUI.Forms
         /// </summary>
         private bool AskForSavingChanges()
         {
-            if ( treeView.TopDataNode == null || !treeView.TopDataNode.HasPendingChanges )
+            if (treeView.TopDataNode == null || !treeView.TopDataNode.HasPendingChanges)
                 return false;
 
             var result = MessageBox.Show(
-                "You have unsaved changes. Do you want to save them?", "Miku Miku Model", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question );
+                "You have unsaved changes. Do you want to save them?", "Miku Miku Model", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 
-            if ( result == DialogResult.Cancel )
+            if (result == DialogResult.Cancel)
                 return true;
 
-            if ( result == DialogResult.OK )
+            if (result == DialogResult.OK)
                 SaveFile();
 
             return false;
@@ -259,7 +278,7 @@ namespace MikuMikuModel.GUI.Forms
         /// </summary>
         private bool CloseFile()
         {
-            if ( AskForSavingChanges() )
+            if (AskForSavingChanges())
                 return false;
 
             Reset();
@@ -270,15 +289,15 @@ namespace MikuMikuModel.GUI.Forms
         /// Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose( bool disposing )
+        protected override void Dispose(bool disposing)
         {
-            if ( disposing )
+            if (disposing)
             {
                 components?.Dispose();
                 ModelViewControl.DisposeInstance();
                 TextureViewControl.DisposeInstance();
             }
-            base.Dispose( disposing );
+            base.Dispose(disposing);
         }
 
         public MainForm()
@@ -290,25 +309,25 @@ namespace MikuMikuModel.GUI.Forms
             Select();
         }
 
-        private void OnConfigurations( object sender, EventArgs e )
+        private void OnConfigurations(object sender, EventArgs e)
         {
-            using ( var configurationsForm = new ConfigurationForm() )
-                configurationsForm.ShowDialog( this );
+            using (var configurationsForm = new ConfigurationForm())
+                configurationsForm.ShowDialog(this);
         }
 
-        private void OnAbout( object sender, EventArgs e )
+        private void OnAbout(object sender, EventArgs e)
         {
-            MessageBox.Show( "MikuMikuModel by Skyth\nThis program is a work in progress." );
+            MessageBox.Show("MikuMikuModel by Skyth\nThis program is a work in progress.");
         }
 
-        private void OnHelp( object sender, EventArgs e )
+        private void OnHelp(object sender, EventArgs e)
         {
-            Process.Start( "https://github.com/blueskythlikesclouds/MikuMikuLibrary/wiki/Miku-Miku-Model" );
+            Process.Start("https://github.com/blueskythlikesclouds/MikuMikuLibrary/wiki/Miku-Miku-Model");
         }
 
-        private void OnPropertyValueChanged( object s, PropertyValueChangedEventArgs e )
+        private void OnPropertyValueChanged(object s, PropertyValueChangedEventArgs e)
         {
-            treeView.SelectedDataNode?.NotifyPropertyChanged( e.ChangedItem.Label );
+            treeView.SelectedDataNode?.NotifyPropertyChanged(e.ChangedItem.Label);
         }
     }
 }

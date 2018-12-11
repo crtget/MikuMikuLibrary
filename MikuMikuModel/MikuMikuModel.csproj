@@ -65,6 +65,12 @@
   <ItemGroup>
     <Compile Include="Configurations\Configuration.cs" />
     <Compile Include="Configurations\ConfigurationList.cs" />
+    <Compile Include="DataNodes\Aet\AetNode.cs" />
+    <Compile Include="DataNodes\Aet\AnimationNode.cs" />
+    <Compile Include="DataNodes\Aet\AnimationPairNode.cs" />
+    <Compile Include="DataNodes\Aet\AnimationPointerEntryNode.cs" />
+    <Compile Include="DataNodes\Aet\SpriteEntryNode.cs" />
+    <Compile Include="DataNodes\Aet\SpriteMetadataEntryNode.cs" />
     <Compile Include="DataNodes\ArchiveNode.cs" />
     <Compile Include="DataNodes\BinaryFileNode.cs" />
     <Compile Include="DataNodes\BoneNode.cs" />
@@ -92,6 +98,7 @@
     <Compile Include="DataNodes\Wrappers\DataTreeView.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="FormatModules\AetFormatModule.cs" />
     <Compile Include="FormatModules\AssimpSceneFormatModule.cs" />
     <Compile Include="FormatModules\BitmapFormatModule.cs" />
     <Compile Include="FormatModules\BoneDatabaseFormatModule.cs" />

@@ -52,6 +52,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Animations\Aet\Aet.cs" />
+    <Compile Include="Animations\Aet\AnimationPair.cs" />
+    <Compile Include="Animations\Aet\Body\AifBody.cs" />
+    <Compile Include="Animations\Aet\Animation.cs" />
+    <Compile Include="Animations\Aet\Body\AnimationBody.cs" />
+    <Compile Include="Animations\Aet\AnimationData.cs" />
+    <Compile Include="Animations\Aet\AnimationPointerEntry.cs" />
+    <Compile Include="Animations\Aet\Body\BodyType.cs" />
+    <Compile Include="Animations\Aet\Body\EffBody.cs" />
+    <Compile Include="Animations\Aet\KeyFrame.cs" />
+    <Compile Include="Animations\Aet\KeyFrameData.cs" />
+    <Compile Include="Animations\Aet\Body\NopBody.cs" />
+    <Compile Include="Animations\Aet\Body\PicBody.cs" />
+    <Compile Include="Animations\Aet\ShaderType.cs" />
+    <Compile Include="Animations\Aet\SpriteEntry.cs" />
+    <Compile Include="Animations\Aet\SpriteMetadataEntry.cs" />
     <Compile Include="Archives\ConflictPolicy.cs" />
     <Compile Include="Archives\Farc\FarcArchive.cs" />
     <Compile Include="Archives\Farc\InternalEntry.cs" />

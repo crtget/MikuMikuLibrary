@@ -83,9 +83,11 @@ namespace MikuMikuModel.DataNodes
             } );
             RegisterDataUpdateHandler( () =>
             {
-                var data = new Model();
-                data.Format = Format;
-                data.Endianness = Endianness;
+                var data = new Model
+                {
+                    Format = Format,
+                    Endianness = Endianness
+                };
                 data.Meshes.AddRange( Meshes.Data );
                 data.TextureIDs.AddRange( Data.TextureIDs );
                 data.TextureSet = Textures?.Data as TextureSet;
