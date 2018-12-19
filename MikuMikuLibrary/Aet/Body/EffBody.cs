@@ -1,4 +1,5 @@
 ﻿using MikuMikuLibrary.IO.Common;
+using System.Collections.Generic;
 
 namespace MikuMikuLibrary.Aet.Body
 {
@@ -13,21 +14,34 @@ namespace MikuMikuLibrary.Aet.Body
         public AetObjPairPointer AnimationPointerEntry { get; set; }
 
         public int UnknownInt0 { get; set; }
-        public int UnknownInt1 { get; set; }
-        public int UnknownInt2 { get; set; }
+
+        public List<AetTimeEvent> TimeEvents { get; set; }
 
         public int AnimationDataOffset { get; internal set; }
         public AnimationData AnimationData { get; set; }
 
-        public int UnknownInt3 { get; set; }
+        public int UnknownEndOffset { get; set; }
 
         internal override void Read(EndianBinaryReader reader)
         {
             AnimationPointerEntryOffset = reader.ReadInt32();
 
             UnknownInt0 = reader.ReadInt32();
-            UnknownInt1 = reader.ReadInt32();
-            UnknownInt2 = reader.ReadInt32();
+
+            {
+                int timeEventsCount = reader.ReadInt32();
+                int timeEventsOffset = reader.ReadInt32();
+
+                TimeEvents = new List<AetTimeEvent>(timeEventsCount);
+                if (timeEventsOffset > 0 && timeEventsCount > 0)
+                {
+                    reader.ReadAtOffsetAndSeekBack(timeEventsOffset, () =>
+                    {
+                        for (int i = 0; i < timeEventsCount; i++)
+                            TimeEvents.Add(AetTimeEvent.Read(reader));
+                    });
+                }
+            }
 
             AnimationDataOffset = reader.ReadInt32();
 
@@ -36,23 +50,37 @@ namespace MikuMikuLibrary.Aet.Body
                 AnimationData = AnimationData.Read(reader);
             });
 
-            UnknownInt3 = reader.ReadInt32();
+            UnknownEndOffset = reader.ReadInt32();
         }
 
         internal override void Write(EndianBinaryWriter writer, AetSet parentAet)
         {
             writer.Write(AnimationPointerEntry.ThisOffset);
 
-            writer.Write(UnknownInt0);
-            writer.Write(UnknownInt1);
-            writer.Write(UnknownInt2);
+            writer.Write(0x0);
+
+            writer.Write(TimeEvents.Count);
+            if (TimeEvents.Count > 0)
+            {
+                writer.EnqueueOffsetWrite(() =>
+                {
+                    foreach (var timeEvent in TimeEvents)
+                        timeEvent.Write(writer);
+                });
+            }
+            else
+            {
+                writer.Write(0x0);
+            }
+
 
             writer.EnqueueOffsetWrite(() =>
             {
                 AnimationData.Write(writer);
             });
 
-            writer.Write(UnknownInt3);
+            writer.Write(0x0);
+            //writer.Write(UnknownEndOffset);
         }
     }
 }

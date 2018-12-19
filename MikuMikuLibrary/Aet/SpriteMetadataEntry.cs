@@ -70,7 +70,7 @@ namespace MikuMikuLibrary.Aet
 
             writer.Write(UnkownFloat);
 
-            SpritesOffset = (int)ReferencedSprites?.FirstOrDefault()?.ThisOffset;
+            SpritesOffset = ReferencedSprites.Count < 1 ? 0x0 : ReferencedSprites.FirstOrDefault().ThisOffset;
 
             writer.Write((int)ReferencedSprites?.Count);
             writer.Write(SpritesOffset);

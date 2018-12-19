@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="Aet\AetSet.cs" />
     <Compile Include="Aet\AetObjPair.cs" />
+    <Compile Include="Aet\Body\AetTimeEvent.cs" />
     <Compile Include="Aet\Body\AifBody.cs" />
     <Compile Include="Aet\AetObj.cs" />
     <Compile Include="Aet\Body\AetObjBody.cs" />

@@ -8,6 +8,8 @@ namespace MikuMikuLibrary.Aet
     /// </summary>
     public sealed class AetObj
     {
+        internal int ThisOffset { get; set; }
+
         public string Name { get; set; }
 
         public float FrameStartTime { get; set; }
@@ -23,6 +25,8 @@ namespace MikuMikuLibrary.Aet
 
         internal void Read(EndianBinaryReader reader, AetSet parentAet)
         {
+            ThisOffset = (int)reader.Position;
+
             Name = reader.ReadStringPtr(StringBinaryFormat.NullTerminated);
 
             FrameStartTime = reader.ReadSingle();
@@ -60,6 +64,8 @@ namespace MikuMikuLibrary.Aet
 
         internal void Write(EndianBinaryWriter writer, AetSet parentAet)
         {
+            ThisOffset = (int)writer.Position;
+
             writer.AddStringToStringTable(Name);
 
             writer.Write(FrameStartTime);

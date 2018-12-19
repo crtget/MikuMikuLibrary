@@ -23,7 +23,7 @@ namespace MikuMikuLibrary.Aet
 
         public int UnknownInt { get; set; }
 
-        public static AnimationData Read(EndianBinaryReader reader)
+        internal static AnimationData Read(EndianBinaryReader reader)
         {
             var animationData = new AnimationData
             {

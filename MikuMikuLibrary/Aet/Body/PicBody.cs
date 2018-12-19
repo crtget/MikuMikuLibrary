@@ -12,9 +12,11 @@ namespace MikuMikuLibrary.Aet.Body
         public int SpriteMetadataOffset { get; internal set; }
         public SpriteMetadataEntry SpriteMetadata { get; internal set; }
 
-        public int UnknownInt0 { get; set; }
-        public int UnknownInt1 { get; set; }
-        public int UnknownInt2 { get; set; }
+        public int PicReferenceOffset { get; internal set; }
+        public AetObj ReferencedPic { get; internal set; }
+
+        public int UnknownCount { get; set; }
+        public int UnknownOffset { get; set; }
 
         public int AnimationDataOffset { get; internal set; }
         public AnimationData AnimationData { get; set; }
@@ -25,9 +27,10 @@ namespace MikuMikuLibrary.Aet.Body
         {
             SpriteMetadataOffset = reader.ReadInt32();
 
-            UnknownInt0 = reader.ReadInt32();
-            UnknownInt1 = reader.ReadInt32();
-            UnknownInt2 = reader.ReadInt32();
+            PicReferenceOffset = reader.ReadInt32();
+
+            UnknownCount = reader.ReadInt32();
+            UnknownOffset = reader.ReadInt32();
 
             AnimationDataOffset = reader.ReadInt32();
 
@@ -43,9 +46,14 @@ namespace MikuMikuLibrary.Aet.Body
         {
             writer.Write(SpriteMetadata.ThisOffset);
 
-            writer.Write(UnknownInt0);
-            writer.Write(UnknownInt1);
-            writer.Write(UnknownInt2);
+            // TODO: handle forward references
+            //writer.Write(0x0);
+            writer.Write(ReferencedPic != null && ReferencedPic.ThisOffset < writer.Position ? ReferencedPic.ThisOffset : 0x0);
+
+            //writer.Write(UnknownCount);
+            //writer.Write(UnknownOffset);
+            writer.Write(0x0);
+            writer.Write(0x0);
 
             writer.EnqueueOffsetWrite(() =>
             {

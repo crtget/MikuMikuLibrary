@@ -163,11 +163,11 @@ namespace MikuMikuLibrary.Aet
 
                 for (int i = 0; i < AetObjPairPointerTable.Count; i++)
                 {
-                    var animationEntry = AetObjPairPointerTable[i];
+                    var objectPointer = AetObjPairPointerTable[i];
 
-                    reader.ReadAtOffset(animationEntry.AetObjPairOffset, () =>
+                    reader.ReadAtOffset(objectPointer.AetObjPairOffset, () =>
                     {
-                        int objectCount = animationEntry.AetObjCount;
+                        int objectCount = objectPointer.AetObjCount;
                         var aetObjects = new List<AetObj>(objectCount);
 
                         for (int j = 0; j < objectCount; j++)
@@ -195,6 +195,11 @@ namespace MikuMikuLibrary.Aet
                         if (aetObj.ObjectBody is PicBody picBody)
                         {
                             picBody.SpriteMetadata = SpriteMetadataEntries.FirstOrDefault(e => e.ThisOffset == picBody.SpriteMetadataOffset);
+
+                            if (picBody.PicReferenceOffset > 0)
+                            {
+                                picBody.ReferencedPic = objectPair.AetObjects.FirstOrDefault(o => o.ThisOffset == picBody.PicReferenceOffset);
+                            }
                         }
                         else if (aetObj.ObjectBody is EffBody effBody)
                         {
@@ -250,7 +255,7 @@ namespace MikuMikuLibrary.Aet
 
                     writer.Write(0x0);
 
-                    // animation pointer table
+                    // aet object pointer table
                     writer.Write(AetObjPairPointerTable.Count);
                     writer.EnqueueOffsetWrite(() =>
                     {
