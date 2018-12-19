@@ -65,10 +65,10 @@
   <ItemGroup>
     <Compile Include="Configurations\Configuration.cs" />
     <Compile Include="Configurations\ConfigurationList.cs" />
-    <Compile Include="DataNodes\Aet\AetNode.cs" />
-    <Compile Include="DataNodes\Aet\AnimationNode.cs" />
-    <Compile Include="DataNodes\Aet\AnimationPairNode.cs" />
-    <Compile Include="DataNodes\Aet\AnimationPointerEntryNode.cs" />
+    <Compile Include="DataNodes\Aet\AetSetNode.cs" />
+    <Compile Include="DataNodes\Aet\AetObjNode.cs" />
+    <Compile Include="DataNodes\Aet\AetObjPairNode.cs" />
+    <Compile Include="DataNodes\Aet\AetObjPairPointerNode.cs" />
     <Compile Include="DataNodes\Aet\SpriteEntryNode.cs" />
     <Compile Include="DataNodes\Aet\SpriteMetadataEntryNode.cs" />
     <Compile Include="DataNodes\ArchiveNode.cs" />

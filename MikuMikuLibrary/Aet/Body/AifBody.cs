@@ -1,8 +1,8 @@
 ﻿using MikuMikuLibrary.IO.Common;
 
-namespace MikuMikuLibrary.Animations.Aet.Body
+namespace MikuMikuLibrary.Aet.Body
 {
-    public sealed class AifBody : AnimationBody
+    public sealed class AifBody : AetObjBody
     {
         public override BodyType BodyType
         {
@@ -14,7 +14,7 @@ namespace MikuMikuLibrary.Animations.Aet.Body
             return;
         }
 
-        internal override void Write(EndianBinaryWriter writer)
+        internal override void Write(EndianBinaryWriter writer, AetSet parentAet)
         {
             return;
         }

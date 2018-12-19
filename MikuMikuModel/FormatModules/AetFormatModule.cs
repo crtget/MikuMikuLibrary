@@ -5,22 +5,22 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MikuMikuLibrary.Animations.Aet;
 using MikuMikuLibrary.IO;
+using MikuMikuLibrary.Aet;
 using MikuMikuLibrary.Sprites;
 
 namespace MikuMikuModel.FormatModules
 {
-    class AetFormatModule : FormatModule<Aet>
+    class AetFormatModule : FormatModule<AetSet>
     {
         public override FormatModuleFlags Flags
         {
-            get => FormatModuleFlags.Import;
+            get => FormatModuleFlags.Import | FormatModuleFlags.Export;
         }
 
         public override string Name
         {
-            get => "Aet Animation Table";
+            get => "Aet Object Container";
         }
 
         public override string[] Extensions
@@ -38,28 +38,28 @@ namespace MikuMikuModel.FormatModules
 
             // 2) check for MAIN string pointer
             {
-                int metadataPtr = ReadInt();
+                int metadataPtr = ReadInt32();
 
                 if (metadataPtr > 0 && metadataPtr < source.Length)
                 {
                     source.Seek(metadataPtr, SeekOrigin.Begin);
 
-                    int mainStrPtr = ReadInt();
+                    int mainStrPtr = ReadInt32();
 
-                    if (mainStrPtr > 0 && mainStrPtr < source.Length - Aet.MAIN_STRING.Length)
+                    if (mainStrPtr > 0 && mainStrPtr < source.Length - AetSet.MAIN_STRING.Length)
                     {
                         source.Seek(mainStrPtr, SeekOrigin.Begin);
 
-                        byte[] mainStrBuffer = new byte[Aet.MAIN_STRING.Length];
+                        byte[] mainStrBuffer = new byte[AetSet.MAIN_STRING.Length];
                         source.Read(mainStrBuffer, 0, mainStrBuffer.Length);
 
-                        if (Encoding.ASCII.GetString(mainStrBuffer) == Aet.MAIN_STRING)
+                        if (Encoding.ASCII.GetString(mainStrBuffer) == AetSet.MAIN_STRING)
                             return true;
                     }
                 }
             }
 
-            int ReadInt()
+            int ReadInt32()
             {
                 byte[] buffer = new byte[sizeof(int)];
                 source.Read(buffer, 0, sizeof(int));
@@ -70,14 +70,14 @@ namespace MikuMikuModel.FormatModules
             return false;
         }
 
-        protected override Aet ImportCore(Stream source, string fileName)
+        protected override AetSet ImportCore(Stream source, string fileName)
         {
-            return BinaryFile.Load<Aet>(source, true);
+            return BinaryFile.Load<AetSet>(source, true);
         }
 
-        protected override void ExportCore(Aet obj, Stream destination, string fileName)
+        protected override void ExportCore(AetSet obj, Stream destination, string fileName)
         {
-            throw new NotImplementedException();
+            obj.Save(destination);
         }
     }
 }

@@ -1,14 +1,13 @@
 ﻿using System.Drawing;
-using System.Linq;
 using MikuMikuLibrary.Aet;
 
 namespace MikuMikuModel.DataNodes.Aet
 {
-    public class SpriteMetadataEntryNode : DataNode<SpriteMetadataEntry>
+    public class AetObjPairNode : DataNode<AetObjPair>
     {
         public override DataNodeFlags Flags
         {
-            get => DataNodeFlags.Leaf;
+            get => DataNodeFlags.Branch;
         }
 
         public override DataNodeActionFlags ActionFlags
@@ -18,7 +17,7 @@ namespace MikuMikuModel.DataNodes.Aet
 
         public override Bitmap Icon
         {
-            get => Properties.Resources.Texture;
+            get => Properties.Resources.Node;
         }
 
         protected override void InitializeCore()
@@ -27,12 +26,15 @@ namespace MikuMikuModel.DataNodes.Aet
 
         protected override void InitializeViewCore()
         {
+            foreach (var animation in Data.AetObjects)
+            {
+                Add(DataNodeFactory.Create<AetObj>(animation.Name ?? "NULL", animation));
+            }
         }
 
-        public SpriteMetadataEntryNode(string name, SpriteMetadataEntry data) : base(data.ReferencedSprites.FirstOrDefault()?.Name ?? name, data)
+        public AetObjPairNode(string name, AetObjPair data) : base(data.PairName ?? name, data)
         {
             return;
         }
     }
-
 }

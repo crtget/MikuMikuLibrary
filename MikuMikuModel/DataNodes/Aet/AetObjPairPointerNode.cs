@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using MikuMikuLibrary;
-using MikuMikuLibrary.Animations.Aet;
-using LibAet = MikuMikuLibrary.Animations.Aet;
+﻿using System.Drawing;
+using MikuMikuLibrary.Aet;
 
 namespace MikuMikuModel.DataNodes.Aet
 {
-    public class AnimationPointerEntryNode : DataNode<AnimationPointerEntry>
+    public class AetObjPairPointerNode : DataNode<AetObjPairPointer>
     {
         public override DataNodeFlags Flags
         {
@@ -35,7 +28,7 @@ namespace MikuMikuModel.DataNodes.Aet
         {
         }
 
-        public AnimationPointerEntryNode(string name, AnimationPointerEntry data) : base(data.ToString() ?? name, data)
+        public AetObjPairPointerNode(string name, AetObjPairPointer data) : base(data.ToString() ?? name, data)
         {
             return;
         }

@@ -1,15 +1,14 @@
-﻿using MikuMikuLibrary.Animations.Aet.Body;
+﻿using MikuMikuLibrary.Aet.Body;
 using MikuMikuLibrary.IO.Common;
 
-namespace MikuMikuLibrary.Animations.Aet
+namespace MikuMikuLibrary.Aet
 {
     /// <summary>
-    /// A container for an <see cref="Body.AnimationBody"/>.
+    /// A container for an <see cref="AetObjBody"/>.
     /// </summary>
-    public sealed class Animation
+    public sealed class AetObj
     {
-        public int AnimationNameOffset { get; set; }
-        public string AnimationName { get; set; }
+        public string Name { get; set; }
 
         public float FrameStartTime { get; set; }
         public float FrameLoopDuration { get; set; }
@@ -20,11 +19,11 @@ namespace MikuMikuLibrary.Animations.Aet
         public byte UnkownByte1 { get; set; }
         public byte UnkownByte2 { get; set; }
 
-        public AnimationBody AnimationBody { get; set; }
+        public AetObjBody ObjectBody { get; set; }
 
-        internal void Read(EndianBinaryReader reader, Aet parentAet)
+        internal void Read(EndianBinaryReader reader, AetSet parentAet)
         {
-            AnimationName = reader.ReadStringPtr(StringBinaryFormat.NullTerminated);
+            Name = reader.ReadStringPtr(StringBinaryFormat.NullTerminated);
 
             FrameStartTime = reader.ReadSingle();
             FrameLoopDuration = reader.ReadSingle();
@@ -40,28 +39,45 @@ namespace MikuMikuLibrary.Animations.Aet
             switch (bodyType)
             {
                 case BodyType.NOP:
-                    AnimationBody = new NopBody();
+                    ObjectBody = new NopBody();
                     break;
                 case BodyType.PIC:
-                    AnimationBody = new PicBody();
+                    ObjectBody = new PicBody();
                     break;
                 case BodyType.AIF:
-                    AnimationBody = new AifBody();
+                    ObjectBody = new AifBody();
                     break;
                 case BodyType.EFF:
-                    AnimationBody = new EffBody();
+                    ObjectBody = new EffBody();
                     break;
                 default:
-                    AnimationBody = null;
+                    ObjectBody = null;
                     break;
             }
 
-            AnimationBody?.Read(reader);
+            ObjectBody?.Read(reader);
+        }
+
+        internal void Write(EndianBinaryWriter writer, AetSet parentAet)
+        {
+            writer.AddStringToStringTable(Name);
+
+            writer.Write(FrameStartTime);
+            writer.Write(FrameLoopDuration);
+            writer.Write(FrameStartTimeAlt);
+            writer.Write(PlaybackSpeed);
+
+            writer.Write(UnkownByte0);
+            writer.Write(UnkownByte1);
+            writer.Write(UnkownByte2);
+
+            writer.Write((byte)ObjectBody.BodyType);
+            ObjectBody.Write(writer, parentAet);
         }
 
         public override string ToString()
         {
-            return $"[{AnimationBody?.BodyType}] - {AnimationName ?? "NULL"}";
+            return $"[{ObjectBody?.BodyType}] - {Name ?? "NULL"}";
         }
     }
 }

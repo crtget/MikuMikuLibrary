@@ -1,7 +1,7 @@
-﻿namespace MikuMikuLibrary.Animations.Aet.Body
+﻿namespace MikuMikuLibrary.Aet.Body
 {
     /// <summary>
-    /// The different kinds of <see cref="AnimationBody"/>s an <see cref="Animation"/> can contain.
+    /// The different kinds of <see cref="AetObjBody"/>s an <see cref="AetObj"/> can contain.
     /// </summary>
     public enum BodyType : byte
     {

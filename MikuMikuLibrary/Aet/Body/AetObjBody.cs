@@ -1,18 +1,18 @@
 ﻿using MikuMikuLibrary.IO.Common;
 
-namespace MikuMikuLibrary.Animations.Aet.Body
+namespace MikuMikuLibrary.Aet.Body
 {
-    public abstract class AnimationBody
+    public abstract class AetObjBody
     {
         public abstract BodyType BodyType { get; }
 
         internal abstract void Read(EndianBinaryReader reader);
 
-        internal abstract void Write(EndianBinaryWriter writer);
+        internal abstract void Write(EndianBinaryWriter writer, AetSet parentAet);
 
         public override string ToString()
         {
-            return $"{nameof(AnimationBody)} : {BodyType}";
+            return $"{nameof(AetObjBody)} : {BodyType}";
         }
     }
 }

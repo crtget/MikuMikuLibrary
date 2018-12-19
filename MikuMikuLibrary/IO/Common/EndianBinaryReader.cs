@@ -203,7 +203,7 @@ namespace MikuMikuLibrary.IO.Common
 
         public void ReadAtOffsetIfNotZero(long offset, Action body)
         {
-            if (offset > 0)
+            if (offset > 0 && offset < BaseStream.Length)
                 ReadAtOffset(offset, body);
         }
 
@@ -227,13 +227,13 @@ namespace MikuMikuLibrary.IO.Common
 
         public void ReadAtOffsetAndSeekBackIfNotZero(long offset, Action body)
         {
-            if (offset > 0)
+            if (offset > 0 && offset < BaseStream.Length)
                 ReadAtOffsetAndSeekBack(offset, body);
         }
 
         public string ReadStringAtOffset(long offset, StringBinaryFormat format, int fixedLength = -1)
         {
-            if (offset > 0)
+            if (offset > 0 && offset < BaseStream.Length)
             {
                 if (baseOffsetStack.Count > 0)
                     offset += baseOffsetStack.Peek();
@@ -250,7 +250,7 @@ namespace MikuMikuLibrary.IO.Common
         public string ReadStringPtr(StringBinaryFormat format, int fixedLength = -1)
         {
             long offset = ReadOffset();
-            if (offset > 0)
+            if (offset > 0 && offset < BaseStream.Length)
             {
                 if (baseOffsetStack.Count > 0)
                     offset += baseOffsetStack.Peek();
@@ -262,29 +262,6 @@ namespace MikuMikuLibrary.IO.Common
                 return value;
             }
             return null;
-        }
-
-        public void ReadStringPtr(out long offset, out string value, StringBinaryFormat format, int fixedLength = -1)
-        {
-            offset = ReadOffset();
-            if (offset > 0)
-            {
-                if (baseOffsetStack.Count > 0)
-                    offset += baseOffsetStack.Peek();
-
-                long previousOffset = Position;
-
-                if (offset < BaseStreamLength)
-                {
-                    SeekBegin(offset);
-                    value = ReadString(format, fixedLength);
-                    SeekBegin(previousOffset);
-
-                    return;
-                }
-            }
-
-            value = null;
         }
 
         public sbyte[] ReadSBytes(int count)

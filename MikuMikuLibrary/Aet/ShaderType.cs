@@ -1,4 +1,4 @@
-﻿namespace MikuMikuLibrary.Animations.Aet
+﻿namespace MikuMikuLibrary.Aet
 {
     /// <summary>
     /// The different predefined fragment shaders a <see cref="Body.PicBody"/> can draw a <see cref="Sprites.Sprite"/> with.

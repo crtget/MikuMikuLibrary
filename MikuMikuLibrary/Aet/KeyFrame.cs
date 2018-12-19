@@ -1,6 +1,6 @@
-﻿namespace MikuMikuLibrary.Animations.Aet
+﻿namespace MikuMikuLibrary.Aet
 {
-    public struct KeyFrame
+    public class KeyFrame
     {
         public float Frame { get; set; }
 
@@ -12,6 +12,13 @@
         {
             Value = value;
             Frame = 0;
+            Bounciness = 0;
+        }
+
+        public KeyFrame(float frame, float value)
+        {
+            Frame = frame;
+            Value = value;
             Bounciness = 0;
         }
 

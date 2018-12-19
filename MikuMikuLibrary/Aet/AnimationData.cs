@@ -1,7 +1,6 @@
 ﻿using MikuMikuLibrary.IO.Common;
-using System.IO;
 
-namespace MikuMikuLibrary.Animations.Aet
+namespace MikuMikuLibrary.Aet
 {
     public class AnimationData
     {
@@ -48,6 +47,27 @@ namespace MikuMikuLibrary.Animations.Aet
             };
 
             return animationData;
+        }
+
+        internal void Write(EndianBinaryWriter writer)
+        {
+            writer.Write((short)Shader);
+            writer.Write(UnkownFlag);
+
+            ScaleXOrigin.Write(writer);
+            ScaleYOrigin.Write(writer);
+
+            PositionX.Write(writer);
+            PositionY.Write(writer);
+
+            Rotation.Write(writer);
+
+            ScaleX.Write(writer);
+            ScaleY.Write(writer);
+
+            Opacity.Write(writer);
+
+            writer.Write(UnknownInt);
         }
     }
 }

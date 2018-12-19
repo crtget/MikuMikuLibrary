@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using MikuMikuLibrary;
-using MikuMikuLibrary.Animations.Aet;
-using MikuMikuLibrary.Sprites;
+using MikuMikuLibrary.Aet;
 using MikuMikuModel.GUI.Controls;
-using LibAet = MikuMikuLibrary.Animations.Aet;
 
 namespace MikuMikuModel.DataNodes.Aet
 {
@@ -34,12 +27,12 @@ namespace MikuMikuModel.DataNodes.Aet
         {
             get
             {
-                if (Data.SpriteName != null)
+                if (Data.Name != null)
                 {
-                    var parentAet = Parent.Parent.Data as LibAet.Aet;
+                    var parentAet = Parent.Parent.Data as AetSet;
 
                     // should be checked based on SpriteId
-                    var sprite = parentAet.AssociatedSpriteSet.Sprites.FirstOrDefault(s => Data.SpriteName.Contains(s.Name));
+                    var sprite = parentAet.AssociatedSpriteSet.Sprites.FirstOrDefault(s => Data.Name.Contains(s.Name));
 
                     if (sprite != null)
                     {
@@ -60,7 +53,7 @@ namespace MikuMikuModel.DataNodes.Aet
         {
         }
 
-        public SpriteEntryNode(string name, SpriteEntry data) : base(data.SpriteName ?? name, data)
+        public SpriteEntryNode(string name, SpriteEntry data) : base(data.Name ?? name, data)
         {
             return;
         }
