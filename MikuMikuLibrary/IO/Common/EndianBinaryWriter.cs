@@ -42,6 +42,12 @@ namespace MikuMikuLibrary.IO.Common
             public byte AlignmentFillerByte;
         }
 
+        private class DelayedWrite
+        {
+            public long BaseOffset;
+            public Action WriteAction;
+        }
+
         private class StringTable
         {
             public long BaseOffset;
@@ -63,6 +69,7 @@ namespace MikuMikuLibrary.IO.Common
         private Stack<long> offsetStack;
         private Stack<long> baseOffsetStack;
         private Queue<OffsetWrite> offsetWriteQueue;
+        private Queue<DelayedWrite> delayedWriteQueue;
         private Stack<StringTable> stringTableStack;
         private List<long> offsetPositions;
 
@@ -126,6 +133,7 @@ namespace MikuMikuLibrary.IO.Common
             offsetStack = new Stack<long>();
             baseOffsetStack = new Stack<long>();
             offsetWriteQueue = new Queue<OffsetWrite>();
+            delayedWriteQueue = new Queue<DelayedWrite>();
             stringTableStack = new Stack<StringTable>();
             offsetPositions = new List<long>();
         }
@@ -206,15 +214,35 @@ namespace MikuMikuLibrary.IO.Common
             body.Invoke();
         }
 
-        public void WriteAtOffsetAndSeekBack( long offset, Action body )
+        public void WriteAndSeekBack( Action body )
         {
             long previousOffset = Position;
-
-            SeekBegin( offset );
             {
                 body.Invoke();
             }
             SeekBegin( previousOffset );
+        }
+
+        public void WriteAtOffsetAndSeekBack(long offset, Action body)
+        {
+            long previousOffset = Position;
+
+            SeekBegin(offset);
+            {
+                body.Invoke();
+            }
+            SeekBegin(previousOffset);
+        }
+
+        public void EnqueueDelayedWrite(Action body)
+        {
+            delayedWriteQueue.Enqueue(new DelayedWrite
+            {
+                BaseOffset = Position,
+                WriteAction = body,
+            });
+
+            PrepareDelayedWrite();
         }
 
         public void EnqueueOffsetWrite( Action body )
@@ -322,6 +350,11 @@ namespace MikuMikuLibrary.IO.Common
             }
         }
 
+        private void PrepareDelayedWrite()
+        {
+            Write(0);
+        }
+
         private void DoOffsetWrite( OffsetWrite offsetWrite, long baseOffset )
         {
             offsetWriteQueue = new Queue<OffsetWrite>();
@@ -384,6 +417,23 @@ namespace MikuMikuLibrary.IO.Common
                 DoOffsetWrite( offsetWriteQueue.Dequeue(), 0 );
 
             this.offsetWriteQueue.Clear();
+        }
+
+        private void DoDelayedWrite(DelayedWrite delayedWrite)
+        {
+            WriteAtOffset(delayedWrite.BaseOffset, delayedWrite.WriteAction);
+        }
+
+        public void DoEnqueuedDelayedWrites()
+        {
+            if (delayedWriteQueue.Count < 1)
+                return;
+
+            WriteAndSeekBack(() =>
+            {
+                while (delayedWriteQueue.Count > 0)
+                    DoDelayedWrite(delayedWriteQueue.Dequeue());
+            });
         }
 
         public void DoEnqueuedOffsetWritesReversed()
@@ -867,6 +917,7 @@ namespace MikuMikuLibrary.IO.Common
             if ( disposing )
             {
                 DoEnqueuedOffsetWrites();
+                DoEnqueuedDelayedWrites();
                 PopStringTablesReversed();
             }
 
