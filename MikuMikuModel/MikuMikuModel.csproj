@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="Configurations\Configuration.cs" />
     <Compile Include="Configurations\ConfigurationList.cs" />
+    <Compile Include="DataNodes\Aet\AetSectionNode.cs" />
     <Compile Include="DataNodes\Aet\AetSetNode.cs" />
     <Compile Include="DataNodes\Aet\AetObjNode.cs" />
     <Compile Include="DataNodes\Aet\AetObjPairNode.cs" />

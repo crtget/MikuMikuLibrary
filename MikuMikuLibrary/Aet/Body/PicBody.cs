@@ -42,7 +42,7 @@ namespace MikuMikuLibrary.Aet.Body
             UnknownInt3 = reader.ReadInt32();
         }
 
-        internal override void Write(EndianBinaryWriter writer, AetSet parentAet)
+        internal override void Write(EndianBinaryWriter writer, AetSection parentAet)
         {
             writer.Write(SpriteMetadata.ThisOffset);
 

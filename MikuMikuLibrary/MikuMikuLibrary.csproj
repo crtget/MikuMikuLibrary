@@ -52,6 +52,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Aet\AetSection.cs" />
+    <Compile Include="Aet\AetSectionType.cs" />
     <Compile Include="Aet\AetSet.cs" />
     <Compile Include="Aet\AetObjPair.cs" />
     <Compile Include="Aet\AetTimeEvent.cs" />

@@ -46,14 +46,14 @@ namespace MikuMikuModel.FormatModules
 
                     int mainStrPtr = ReadInt32();
 
-                    if (mainStrPtr > 0 && mainStrPtr < source.Length - AetSet.MAIN_STRING.Length)
+                    if (mainStrPtr > 0 && mainStrPtr < source.Length - AetSection.MAIN_STRING.Length)
                     {
                         source.Seek(mainStrPtr, SeekOrigin.Begin);
 
-                        byte[] mainStrBuffer = new byte[AetSet.MAIN_STRING.Length];
+                        byte[] mainStrBuffer = new byte[AetSection.MAIN_STRING.Length];
                         source.Read(mainStrBuffer, 0, mainStrBuffer.Length);
 
-                        if (Encoding.ASCII.GetString(mainStrBuffer) == AetSet.MAIN_STRING)
+                        if (Encoding.ASCII.GetString(mainStrBuffer) == AetSection.MAIN_STRING)
                             return true;
                     }
                 }

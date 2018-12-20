@@ -23,7 +23,7 @@ namespace MikuMikuLibrary.Aet
 
         public AetObjBody ObjectBody { get; set; }
 
-        internal void Read(EndianBinaryReader reader, AetSet parentAet)
+        internal void Read(EndianBinaryReader reader, AetSection parentAet)
         {
             ThisOffset = (int)reader.Position;
 
@@ -62,7 +62,7 @@ namespace MikuMikuLibrary.Aet
             ObjectBody?.Read(reader);
         }
 
-        internal void Write(EndianBinaryWriter writer, AetSet parentAet)
+        internal void Write(EndianBinaryWriter writer, AetSection parentAet)
         {
             ThisOffset = (int)writer.Position;
 

@@ -8,6 +8,9 @@ namespace MikuMikuLibrary.IO
 {
     public abstract class BinaryFile : IBinaryFile
     {
+        //internal static readonly Encoding Encoding = Encoding.UTF8;
+        internal static readonly Encoding Encoding = Encoding.GetEncoding("shift-jis");
+
         protected Stream stream;
         protected bool ownsStream;
 
@@ -70,7 +73,7 @@ namespace MikuMikuLibrary.IO
             }
 
             // Or try to read in the old fashioned way
-            using ( var reader = new EndianBinaryReader( source, Encoding.UTF8, true, Endianness ) )
+            using ( var reader = new EndianBinaryReader( source, Encoding, true, Endianness ) )
             {
                 reader.PushBaseOffset();
                 {
@@ -118,7 +121,7 @@ namespace MikuMikuLibrary.IO
             }
 
             // Or try to write in the old fashioned way
-            using ( var writer = new EndianBinaryWriter( destination, Encoding.UTF8, true, Endianness ) )
+            using ( var writer = new EndianBinaryWriter( destination, Encoding, true, Endianness ) )
             {
                 writer.PushBaseOffset();
                 {

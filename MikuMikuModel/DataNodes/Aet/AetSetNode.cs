@@ -1,4 +1,5 @@
-﻿using MikuMikuLibrary.Aet;
+﻿using System.Drawing;
+using MikuMikuLibrary.Aet;
 
 namespace MikuMikuModel.DataNodes.Aet
 {
@@ -23,11 +24,11 @@ namespace MikuMikuModel.DataNodes.Aet
 
         protected override void InitializeViewCore()
         {
-            Add(new ListNode<SpriteEntry>("Sprite Entries", Data.SpriteEntries));
-            Add(new ListNode<SpriteMetadataEntry>("Sprite Metadata", Data.SpriteMetadataEntries));
-            Add(new ListNode<AetObjPairPointer>("Aet Object Pair Pointer Table", Data.AetObjPairPointerTable));
+            if (Data.MainSection != null)
+                Add(new AetSectionNode(Data.MainSection.Name, Data.MainSection));
 
-            Add(new ListNode<AetObjPair>("Aet Object Pairs", Data.AetObjPairs));
+            if (Data.TouchSection != null)
+                Add(new AetSectionNode(Data.TouchSection.Name, Data.TouchSection));
         }
 
         public AetSetNode(string name, AetSet data) : base(name, data)

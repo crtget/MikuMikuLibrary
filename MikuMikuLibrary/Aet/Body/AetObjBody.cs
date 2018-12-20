@@ -8,7 +8,7 @@ namespace MikuMikuLibrary.Aet.Body
 
         internal abstract void Read(EndianBinaryReader reader);
 
-        internal abstract void Write(EndianBinaryWriter writer, AetSet parentAet);
+        internal abstract void Write(EndianBinaryWriter writer, AetSection parentAet);
 
         public override string ToString()
         {

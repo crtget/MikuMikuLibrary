@@ -29,11 +29,11 @@ namespace MikuMikuLibrary.Aet
             AetObjects = aetObjects;
         }
 
-        internal void Write(EndianBinaryWriter writer, AetSet parentAet)
+        internal void Write(EndianBinaryWriter writer, AetSection parentAet)
         {
-            foreach (var animation in AetObjects)
+            foreach (var aetObj in AetObjects)
             {
-                animation.Write(writer, parentAet);
+                aetObj.Write(writer, parentAet);
             }
         }
     }

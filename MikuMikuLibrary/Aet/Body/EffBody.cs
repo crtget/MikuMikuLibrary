@@ -10,8 +10,8 @@ namespace MikuMikuLibrary.Aet.Body
             get => BodyType.EFF;
         }
 
-        public int AnimationPointerEntryOffset { get; internal set; }
-        public AetObjPairPointer AnimationPointerEntry { get; set; }
+        public int AetObjPairPointerOffset { get; internal set; }
+        public AetObjPairPointer AetObjPairPointer { get; set; }
 
         public int UnknownInt0 { get; set; }
 
@@ -24,7 +24,7 @@ namespace MikuMikuLibrary.Aet.Body
 
         internal override void Read(EndianBinaryReader reader)
         {
-            AnimationPointerEntryOffset = reader.ReadInt32();
+            AetObjPairPointerOffset = reader.ReadInt32();
 
             UnknownInt0 = reader.ReadInt32();
 
@@ -53,9 +53,9 @@ namespace MikuMikuLibrary.Aet.Body
             UnknownEndOffset = reader.ReadInt32();
         }
 
-        internal override void Write(EndianBinaryWriter writer, AetSet parentAet)
+        internal override void Write(EndianBinaryWriter writer, AetSection parentAet)
         {
-            writer.Write(AnimationPointerEntry.ThisOffset);
+            writer.Write(AetObjPairPointer.ThisOffset);
 
             writer.Write(0x0);
 

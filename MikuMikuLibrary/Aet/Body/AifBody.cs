@@ -14,7 +14,7 @@ namespace MikuMikuLibrary.Aet.Body
             return;
         }
 
-        internal override void Write(EndianBinaryWriter writer, AetSet parentAet)
+        internal override void Write(EndianBinaryWriter writer, AetSection parentAet)
         {
             return;
         }

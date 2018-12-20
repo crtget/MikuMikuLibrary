@@ -21,7 +21,7 @@ namespace MikuMikuLibrary.IO.Common
         private AddressSpace addressSpace;
         private Stack<long> offsetStack;
         private Stack<long> baseOffsetStack;
-
+        
         public Endianness Endianness
         {
             get { return endianness; }

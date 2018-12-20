@@ -39,7 +39,7 @@ namespace MikuMikuLibrary.Aet
             };
         }
 
-        internal void Write(EndianBinaryWriter writer, AetSet parentAet)
+        internal void Write(EndianBinaryWriter writer, AetSection parentAet)
         {
             ThisOffset = (int)writer.Position;
 
