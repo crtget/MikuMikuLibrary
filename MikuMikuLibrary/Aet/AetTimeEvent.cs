@@ -1,6 +1,6 @@
 ﻿using MikuMikuLibrary.IO.Common;
 
-namespace MikuMikuLibrary.Aet.Body
+namespace MikuMikuLibrary.Aet
 {
     public sealed class AetTimeEvent
     {
