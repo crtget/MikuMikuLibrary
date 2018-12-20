@@ -79,8 +79,8 @@ namespace MikuMikuLibrary.Aet.Body
                 AnimationData.Write(writer);
             });
 
-            writer.Write(0x0);
             //writer.Write(UnknownEndOffset);
+            writer.Write(0x0);
         }
     }
 }
