@@ -5,20 +5,11 @@ namespace MikuMikuModel.DataNodes.Aet
 {
     public class AetObjPairPointerNode : DataNode<AetObjPairPointer>
     {
-        public override DataNodeFlags Flags
-        {
-            get => DataNodeFlags.Leaf;
-        }
+        public override DataNodeFlags Flags => DataNodeFlags.Leaf;
 
-        public override DataNodeActionFlags ActionFlags
-        {
-            get => DataNodeActionFlags.None;
-        }
+        public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.None;
 
-        public override Bitmap Icon
-        {
-            get => Properties.Resources.Node;
-        }
+        public override Bitmap Icon => Properties.Resources.Node;
 
         protected override void InitializeCore()
         {

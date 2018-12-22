@@ -234,7 +234,7 @@ namespace MikuMikuLibrary.IO.Common
             SeekBegin(previousOffset);
         }
 
-        public void EnqueueDelayedWrite(Action body)
+        public void EnqueueDelayedWrite(int size, Action body)
         {
             delayedWriteQueue.Enqueue(new DelayedWrite
             {
@@ -242,7 +242,7 @@ namespace MikuMikuLibrary.IO.Common
                 WriteAction = body,
             });
 
-            PrepareDelayedWrite();
+            PrepareDelayedWrite(size);
         }
 
         public void EnqueueOffsetWrite( Action body )
@@ -350,9 +350,9 @@ namespace MikuMikuLibrary.IO.Common
             }
         }
 
-        private void PrepareDelayedWrite()
+        private void PrepareDelayedWrite(int size)
         {
-            Write(0);
+            WriteNulls(size);
         }
 
         private void DoOffsetWrite( OffsetWrite offsetWrite, long baseOffset )

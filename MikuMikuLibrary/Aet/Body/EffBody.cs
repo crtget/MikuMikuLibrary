@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace MikuMikuLibrary.Aet.Body
 {
-    public sealed class EffBody : AetObjBody
+    public sealed class EffBody : AetObjBody, IAnimatable
     {
         public override BodyType BodyType
         {
@@ -55,7 +55,10 @@ namespace MikuMikuLibrary.Aet.Body
 
         internal override void Write(EndianBinaryWriter writer, AetSection parentAet)
         {
-            writer.Write(AetObjPairPointer.ThisOffset);
+            writer.EnqueueDelayedWrite(sizeof(int), () =>
+            {
+                writer.Write(AetObjPairPointer.ThisOffset);
+            });
 
             writer.Write(0x0);
 
@@ -72,7 +75,6 @@ namespace MikuMikuLibrary.Aet.Body
             {
                 writer.Write(0x0);
             }
-
 
             writer.EnqueueOffsetWrite(() =>
             {

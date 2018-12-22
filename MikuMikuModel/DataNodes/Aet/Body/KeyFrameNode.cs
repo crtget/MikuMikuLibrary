@@ -1,16 +1,16 @@
 ﻿using System.Drawing;
-using System.Linq;
 using MikuMikuLibrary.Aet;
+using MikuMikuLibrary.Aet.Body;
 
-namespace MikuMikuModel.DataNodes.Aet
+namespace MikuMikuModel.DataNodes.Aet.Body
 {
-    public class SpriteMetadataEntryNode : DataNode<SpriteMetadataEntry>
+    public class KeyFrameNode : DataNode<KeyFrame>
     {
         public override DataNodeFlags Flags => DataNodeFlags.Leaf;
 
         public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.None;
 
-        public override Bitmap Icon => Properties.Resources.Texture;
+        public override Bitmap Icon => Properties.Resources.Node;
 
         protected override void InitializeCore()
         {
@@ -20,10 +20,9 @@ namespace MikuMikuModel.DataNodes.Aet
         {
         }
 
-        public SpriteMetadataEntryNode(string name, SpriteMetadataEntry data) : base(data.ReferencedSprites.FirstOrDefault()?.Name ?? name, data)
+        public KeyFrameNode(string name, KeyFrame data) : base(name, data)
         {
             return;
         }
     }
-
 }

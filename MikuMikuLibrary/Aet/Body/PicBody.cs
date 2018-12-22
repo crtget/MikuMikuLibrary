@@ -2,7 +2,7 @@
 
 namespace MikuMikuLibrary.Aet.Body
 {
-    public sealed class PicBody : AetObjBody
+    public sealed class PicBody : AetObjBody, IAnimatable
     {
         public override BodyType BodyType
         {
@@ -48,7 +48,7 @@ namespace MikuMikuLibrary.Aet.Body
 
             if (ReferencedPic != null)
             {
-                writer.EnqueueDelayedWrite(() =>
+                writer.EnqueueDelayedWrite(sizeof(int), () =>
                 {
                     writer.Write(ReferencedPic.ThisOffset);
                 });

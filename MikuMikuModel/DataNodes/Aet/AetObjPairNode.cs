@@ -5,20 +5,11 @@ namespace MikuMikuModel.DataNodes.Aet
 {
     public class AetObjPairNode : DataNode<AetObjPair>
     {
-        public override DataNodeFlags Flags
-        {
-            get => DataNodeFlags.Branch;
-        }
+        public override DataNodeFlags Flags => DataNodeFlags.Branch;
 
-        public override DataNodeActionFlags ActionFlags
-        {
-            get => DataNodeActionFlags.None;
-        }
+        public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.None;
 
-        public override Bitmap Icon
-        {
-            get => Properties.Resources.Node;
-        }
+        public override Bitmap Icon => Properties.Resources.Node;
 
         protected override void InitializeCore()
         {
@@ -26,9 +17,9 @@ namespace MikuMikuModel.DataNodes.Aet
 
         protected override void InitializeViewCore()
         {
-            foreach (var animation in Data.AetObjects)
+            foreach (var aetObj in Data.AetObjects)
             {
-                Add(DataNodeFactory.Create<AetObj>(animation.Name ?? "NULL", animation));
+                Add(new AetObjNode(aetObj.Name ?? "NULL", aetObj));
             }
         }
 

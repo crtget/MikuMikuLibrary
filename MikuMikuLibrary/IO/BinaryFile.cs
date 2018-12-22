@@ -8,8 +8,7 @@ namespace MikuMikuLibrary.IO
 {
     public abstract class BinaryFile : IBinaryFile
     {
-        //internal static readonly Encoding Encoding = Encoding.UTF8;
-        internal static readonly Encoding Encoding = Encoding.GetEncoding("shift-jis");
+        internal static readonly Encoding Encoding = Encoding.GetEncoding("shift-jis"); // Encoding.UTF8;
 
         protected Stream stream;
         protected bool ownsStream;

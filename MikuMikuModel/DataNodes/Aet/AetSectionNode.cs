@@ -5,20 +5,11 @@ namespace MikuMikuModel.DataNodes.Aet
 {
     public class AetSectionNode : DataNode<AetSection>
     {
-        public override DataNodeFlags Flags
-        {
-            get => DataNodeFlags.Branch;
-        }
+        public override DataNodeFlags Flags => DataNodeFlags.Branch;
 
-        public override DataNodeActionFlags ActionFlags
-        {
-            get => DataNodeActionFlags.Export;
-        }
+        public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.Export;
 
-        public override Bitmap Icon
-        {
-            get => Properties.Resources.Folder;
-        }
+        public override Bitmap Icon => Properties.Resources.Folder;
 
         protected override void InitializeCore()
         {

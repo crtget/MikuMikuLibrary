@@ -8,20 +8,11 @@ namespace MikuMikuModel.DataNodes.Aet
 {
     public class SpriteEntryNode : DataNode<SpriteEntry>
     {
-        public override DataNodeFlags Flags
-        {
-            get => DataNodeFlags.Leaf;
-        }
+        public override DataNodeFlags Flags => DataNodeFlags.Leaf;
 
-        public override DataNodeActionFlags ActionFlags
-        {
-            get => DataNodeActionFlags.None;
-        }
+        public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.None;
 
-        public override Bitmap Icon
-        {
-            get => Properties.Resources.Texture;
-        }
+        public override Bitmap Icon => Properties.Resources.Texture;
 
         public override Control Control
         {
@@ -29,10 +20,10 @@ namespace MikuMikuModel.DataNodes.Aet
             {
                 if (Data.Name != null)
                 {
-                    var parentAet = Parent.Parent.Data as AetSet;
+                    var parentAet = Parent.Parent.Parent.Data as AetSet;
 
                     // should be checked based on SpriteId
-                    var sprite = parentAet.AssociatedSpriteSet.Sprites.FirstOrDefault(s => Data.Name.Contains(s.Name));
+                    var sprite = parentAet?.AssociatedSpriteSet?.Sprites.FirstOrDefault(s => Data.Name.EndsWith(s.Name));
 
                     if (sprite != null)
                     {
@@ -41,7 +32,7 @@ namespace MikuMikuModel.DataNodes.Aet
                     }
                 }
 
-                return null;
+                return base.Control;
             }
         }
 

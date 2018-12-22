@@ -5,15 +5,9 @@ namespace MikuMikuModel.DataNodes.Aet
 {
     public class AetSetNode : BinaryFileNode<AetSet>
     {
-        public override DataNodeFlags Flags
-        {
-            get => DataNodeFlags.Branch;
-        }
+        public override DataNodeFlags Flags => DataNodeFlags.Branch;
 
-        public override DataNodeActionFlags ActionFlags
-        {
-            get => DataNodeActionFlags.Export;
-        }
+        public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.Export;
 
         protected override void InitializeCore()
         {

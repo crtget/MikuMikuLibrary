@@ -64,6 +64,7 @@
     <Compile Include="Aet\AetObjPairPointer.cs" />
     <Compile Include="Aet\Body\BodyType.cs" />
     <Compile Include="Aet\Body\EffBody.cs" />
+    <Compile Include="Aet\Body\IAnimatable.cs" />
     <Compile Include="Aet\KeyFrame.cs" />
     <Compile Include="Aet\KeyFrameData.cs" />
     <Compile Include="Aet\Body\NopBody.cs" />
