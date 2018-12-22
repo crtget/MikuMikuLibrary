@@ -13,33 +13,53 @@ namespace MikuMikuModel.DataNodes.Aet
 
         public override Bitmap Icon => Properties.Resources.Folder;
 
+        protected bool reAddingNodes = false;
+
         protected override void InitializeCore()
         {
+            NodeRemoved += (e, o) =>
+            {
+                if (reAddingNodes)
+                    return;
+
+                base.Data.KeyFrames.Remove((KeyFrame)o.ChildNode.Data);
+
+                ReAddNodes();
+            };
+
             RegisterCustomHandler("Add Start Key Frame", () =>
             {
                 var first = Data.KeyFrames.FirstOrDefault();
-                Data.KeyFrames.Insert(0, first != null ? new KeyFrame(first.Frame, first.Value) : new KeyFrame(0));
+                var newNode = first != null ? new KeyFrame(first.Frame, first.Value) : new KeyFrame(0);
 
-                Refresh();
+                Data.KeyFrames.Insert(0, newNode);
+
+                ReAddNodes();
             });
-            RegisterCustomHandler("Add End Key Frame", () => 
+            RegisterCustomHandler("Add End Key Frame", () =>
             {
                 var last = Data.KeyFrames.LastOrDefault();
-                Data.KeyFrames.Add(last != null ? new KeyFrame(last.Frame, last.Value) : new KeyFrame(0));
+                var newNode = last != null ? new KeyFrame(last.Frame, last.Value) : new KeyFrame(0);
 
-                Refresh();
+                Data.KeyFrames.Add(newNode);
+
+                ReAddNodes();
             });
-
-            void Refresh()
-            {
-                Clear();
-                InitializeViewCore();
-
-                HasPendingChanges = true;
-            }
         }
 
-        protected override void InitializeViewCore()
+        protected void ReAddNodes()
+        {
+            reAddingNodes = true;
+            {
+                Clear();
+                AddKeyFrameNodes();
+            }
+            reAddingNodes = false;
+
+            HasPendingChanges = true;
+        }
+
+        protected void AddKeyFrameNodes()
         {
             for (int i = 0; i < Data.KeyFrames.Count; i++)
             {
@@ -47,10 +67,13 @@ namespace MikuMikuModel.DataNodes.Aet
             }
         }
 
+        protected override void InitializeViewCore()
+        {
+            AddKeyFrameNodes();
+        }
+
         public KeyFrameDataNode(string name, KeyFrameData data) : base(name, data)
         {
         }
     }
-
-
 }
