@@ -2,13 +2,13 @@
 using MikuMikuLibrary.Aet;
 using MikuMikuLibrary.Aet.Body;
 
-namespace MikuMikuModel.DataNodes.Aet.Body
+namespace MikuMikuModel.DataNodes.Aet
 {
     public class KeyFrameNode : DataNode<KeyFrame>
     {
         public override DataNodeFlags Flags => DataNodeFlags.Leaf;
 
-        public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.None;
+        public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.Move | DataNodeActionFlags.Remove;
 
         public override Bitmap Icon => Properties.Resources.Node;
 

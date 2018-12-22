@@ -71,9 +71,10 @@
     <Compile Include="DataNodes\Aet\AetObjPairNode.cs" />
     <Compile Include="DataNodes\Aet\AetObjPairPointerNode.cs" />
     <Compile Include="DataNodes\Aet\Body\AifNode.cs" />
-    <Compile Include="DataNodes\Aet\Body\AnimationDataNode.cs" />
+    <Compile Include="DataNodes\Aet\AnimationDataNode.cs" />
     <Compile Include="DataNodes\Aet\Body\EffNode.cs" />
-    <Compile Include="DataNodes\Aet\Body\KeyFrameNode.cs" />
+    <Compile Include="DataNodes\Aet\KeyFrameDataNode.cs" />
+    <Compile Include="DataNodes\Aet\KeyFrameNode.cs" />
     <Compile Include="DataNodes\Aet\Body\NopNode.cs" />
     <Compile Include="DataNodes\Aet\Body\PicNode.cs" />
     <Compile Include="DataNodes\Aet\SpriteEntryNode.cs" />
