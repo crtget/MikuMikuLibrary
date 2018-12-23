@@ -8,18 +8,14 @@
 
         public float Bounciness { get; set; }
 
-        public KeyFrame(float value)
+        public KeyFrame(float value) : this(0, value)
         {
-            Value = value;
-            Frame = 0;
-            Bounciness = 0;
+            return;
         }
 
-        public KeyFrame(float frame, float value)
+        public KeyFrame(float frame, float value) : this(frame, value, 0)
         {
-            Frame = frame;
-            Value = value;
-            Bounciness = 0;
+            return;
         }
 
         public KeyFrame(float frame, float value, float bounciness)
@@ -31,7 +27,7 @@
 
         public override string ToString()
         {
-            return $"Frame: {Frame}; Value: {Value}; {Bounciness}";
+            return $"{nameof(Frame)}: {Frame}; {nameof(Value)}: {Value}; {Bounciness}";
         }
     }
 }

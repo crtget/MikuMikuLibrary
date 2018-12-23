@@ -63,7 +63,7 @@ namespace MikuMikuModel.DataNodes.Aet
         {
             for (int i = 0; i < Data.KeyFrames.Count; i++)
             {
-                Add(new KeyFrameNode($"{nameof(Data.KeyFrames)} #{i}", Data.KeyFrames[i]));
+                Add(new KeyFrameNode($"{nameof(KeyFrame)} #{i}", Data.KeyFrames[i]));
             }
         }
 
