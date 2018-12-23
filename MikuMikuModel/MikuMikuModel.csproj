@@ -146,6 +146,8 @@
     <Compile Include="GUI\Forms\ConfigurationForm.Designer.cs">
       <DependentUpon>ConfigurationForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="GUI\Style\DarkModeColorTable.cs" />
+    <Compile Include="GUI\Style\DarkModeToolStripRenderer.cs" />
     <Compile Include="GUI\Forms\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace MikuMikuModel.DataNodes.Wrappers
@@ -7,13 +8,13 @@ namespace MikuMikuModel.DataNodes.Wrappers
     {
         public new DataTreeNode SelectedNode
         {
-            get { return ( base.SelectedNode as DataTreeNode ); }
+            get { return (base.SelectedNode as DataTreeNode); }
             set { base.SelectedNode = value; }
         }
 
         public new DataTreeNode TopNode
         {
-            get { return Nodes.Count != 0 ? ( DataTreeNode )Nodes[ 0 ] : null; }
+            get { return Nodes.Count != 0 ? (DataTreeNode)Nodes[0] : null; }
         }
 
         public DataNode TopDataNode
@@ -31,9 +32,9 @@ namespace MikuMikuModel.DataNodes.Wrappers
             get { return SelectedDataNode?.Control; }
         }
 
-        private void InitializeNodeView( DataTreeNode treeNode )
+        private void InitializeNodeView(DataTreeNode treeNode)
         {
-            if ( treeNode == null || treeNode.DataNode.IsViewInitialized )
+            if (treeNode == null || treeNode.DataNode.IsViewInitialized)
                 return;
 
             BeginUpdate();
@@ -43,28 +44,28 @@ namespace MikuMikuModel.DataNodes.Wrappers
             }
             EndUpdate();
         }
-
-        protected override void OnNodeMouseClick( TreeNodeMouseClickEventArgs e )
+        
+        protected override void OnNodeMouseClick(TreeNodeMouseClickEventArgs e)
         {
-            InitializeNodeView( e.Node as DataTreeNode );
-            base.OnNodeMouseClick( e );
+            InitializeNodeView(e.Node as DataTreeNode);
+            base.OnNodeMouseClick(e);
         }
 
-        protected override void OnAfterExpand( TreeViewEventArgs e )
+        protected override void OnAfterExpand(TreeViewEventArgs e)
         {
-            InitializeNodeView( e.Node as DataTreeNode );
-            base.OnAfterExpand( e );
+            InitializeNodeView(e.Node as DataTreeNode);
+            base.OnAfterExpand(e);
         }
 
-        protected override void Dispose( bool disposing )
+        protected override void Dispose(bool disposing)
         {
-            if ( disposing )
+            if (disposing)
             {
-                foreach ( var dataNode in Nodes.OfType<DataTreeNode>().Select( x => x.DataNode ) )
+                foreach (var dataNode in Nodes.OfType<DataTreeNode>().Select(x => x.DataNode))
                     dataNode.Dispose();
             }
 
-            base.Dispose( disposing );
+            base.Dispose(disposing);
         }
 
         public DataTreeView()

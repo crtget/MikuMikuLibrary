@@ -1,5 +1,6 @@
 ﻿using MikuMikuLibrary.Sprites;
 using MikuMikuLibrary.Textures;
+using MikuMikuModel.GUI.Forms.Style;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -238,6 +239,14 @@ namespace MikuMikuModel.GUI.Controls
         public TextureViewControl()
         {
             InitializeComponent();
+        }
+
+        private void OnLoad(object sender, EventArgs e)
+        {
+            DarkModeColorTable colorTable = DarkModeColorTable.Instance;
+
+            statusStrip.BackColor = colorTable.BorderColor;
+            statusStrip.ForeColor = colorTable.ForeColor;
         }
     }
 }

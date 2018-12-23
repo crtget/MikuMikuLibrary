@@ -72,6 +72,7 @@
             this.Controls.Add(this.statusStrip);
             this.Name = "TextureViewControl";
             this.Size = new System.Drawing.Size(538, 362);
+            this.Load += new System.EventHandler(this.OnLoad);
             this.statusStrip.ResumeLayout(false);
             this.statusStrip.PerformLayout();
             this.ResumeLayout(false);
