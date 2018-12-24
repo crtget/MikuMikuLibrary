@@ -18,19 +18,19 @@ namespace MikuMikuModel.GUI.Forms.Style
             }
         }
 
-        public Color TextColor { get; } = Color.FromArgb(214, 241, 241);
+        public Color TextColor { get; } = Color.FromArgb(241, 241, 241);
 
         public Color SelectedTextColor => TextColor;
 
         public Color ForeColor => TextColor;
 
-        public Color BackColor => Color.FromArgb(37, 37, 38);
+        public Color BackColor { get; } = Color.FromArgb(37, 37, 38);
 
-        public Color BorderColor => Color.FromArgb(45, 45, 48);
+        public Color BorderColor { get; } = Color.FromArgb(45, 45, 48);
 
-        public override Color ToolStripDropDownBackground => Color.FromArgb(27, 27, 28);
+        public override Color ToolStripDropDownBackground { get; } = Color.FromArgb(27, 27, 28);
 
-        public override Color MenuItemSelected => Color.FromArgb(51, 51, 52);
+        public override Color MenuItemSelected { get; } = Color.FromArgb(51, 51, 52);
 
         public override Color MenuBorder { get; } = Color.Transparent;
 
