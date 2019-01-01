@@ -28,7 +28,7 @@ namespace MikuMikuModel.DataNodes
 
         [Browsable( false )]
         public ListNode<Texture> Textures { get; set; }
-        
+
         [Browsable( false )]
         public TextureDatabaseNode TextureDatabaseNode { get; set; }
 
@@ -127,20 +127,22 @@ namespace MikuMikuModel.DataNodes
             // Pass the format/endianness
             Data.Format = oldDataT.Format;
             Data.Endianness = oldDataT.Endianness;
-            
+
             // Pass new texture database to the node we adopted
             if ( TextureDatabaseNode != null )
             {
                 var textureDatabase = new TextureDatabase();
-                
+
                 textureDatabase.Textures.Capacity = Data.Textures.Count;
                 foreach ( var texture in Data.Textures )
+                {
                     textureDatabase.Textures.Add( new TextureEntry
-                        {
-                            Name = texture.Name,
-                            ID = texture.ID,
-                        } );
-                        
+                    {
+                        Name = texture.Name,
+                        ID = texture.ID,
+                    } );
+                }
+
                 TextureDatabaseNode.Replace( textureDatabase );
             }
 

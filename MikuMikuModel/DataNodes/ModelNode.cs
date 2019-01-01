@@ -226,6 +226,8 @@ namespace MikuMikuModel.DataNodes
             {
                 textureSet.Format = Data.Format;
                 textureSet.Endianness = Data.Endianness;
+
+                Textures.InitializeView();
             }
         }
 
