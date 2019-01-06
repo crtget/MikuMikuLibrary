@@ -73,7 +73,7 @@ namespace MikuMikuLibrary.IO.Sections
                     bytes.Add( ( byte )( 0x80 | ( distance >> 8 ) ) );
                     bytes.Add( ( byte )( distance ) );
                 }
-                else
+                else if ( distance > 0 )
                 {
                     bytes.Add( ( byte )( 0x40 | distance ) );
                 }
