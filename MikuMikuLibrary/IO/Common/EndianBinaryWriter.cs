@@ -268,6 +268,8 @@ namespace MikuMikuLibrary.IO.Common
             for ( LinkedListNode<ScheduledWriteOffset> current = first.Next; current != null && current != last.Next; current = current.Next )
                 DoScheduledWriteOffset( current, baseOffset );
 
+            mOffsetPositions.Add( scheduledWriteOffset.FieldOffset );
+
             WriteAtOffset( scheduledWriteOffset.FieldOffset, () =>
             {
                 switch ( scheduledWriteOffset.OffsetMode )
