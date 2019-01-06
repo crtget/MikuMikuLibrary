@@ -5,7 +5,6 @@ using MikuMikuLibrary.Misc;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Linq;
 
 namespace MikuMikuLibrary.Models
 {
@@ -25,7 +24,7 @@ namespace MikuMikuLibrary.Models
             IsModern = 1 << 31,
         };
 
-        public static int ByteSize( BinaryFormat format )
+        public static int GetByteSize( BinaryFormat format )
         {
             switch ( format )
             {
@@ -68,7 +67,7 @@ namespace MikuMikuLibrary.Models
             IndexTables.Capacity = indexTableCount;
             for ( int i = 0; i < indexTableCount; i++ )
             {
-                reader.ReadAtOffset( indexTablesOffset + ( i * IndexTable.ByteSize( section?.Format ?? BinaryFormat.DT ) ), () =>
+                reader.ReadAtOffset( indexTablesOffset + ( i * IndexTable.GetByteSize( section?.Format ?? BinaryFormat.DT ) ), () =>
                 {
                     var indexTable = new IndexTable();
                     indexTable.Read( reader, section );
@@ -134,7 +133,7 @@ namespace MikuMikuLibrary.Models
                         // Checks to get rid of useless data after reading
                         if ( Tangents[ i ] != Vector4.Zero ) hasTangents = true;
                         if ( UVChannel1[ i ] != UVChannel2[ i ] ) hasUVChannel2 = true;
-                        if ( !Colors[ i ].Equals( Color.One ) ) hasColors = true;
+                        if ( !Colors[ i ].Equals( Color.White ) ) hasColors = true;
                     }
 
                     if ( !hasTangents ) Tangents = null;
@@ -323,7 +322,7 @@ namespace MikuMikuLibrary.Models
                     vertexWriter.Write( Tangents?[ i ] ?? Vector4.Zero, VectorBinaryFormat.Int16 );
                     vertexWriter.Write( UVChannel1?[ i ] ?? Vector2.Zero, VectorBinaryFormat.Half );
                     vertexWriter.Write( UVChannel2?[ i ] ?? UVChannel1?[ i ] ?? Vector2.Zero, VectorBinaryFormat.Half );
-                    vertexWriter.Write( Colors?[ i ] ?? Color.One, VectorBinaryFormat.Half );
+                    vertexWriter.Write( Colors?[ i ] ?? Color.White, VectorBinaryFormat.Half );
 
                     if ( BoneWeights != null )
                     {
