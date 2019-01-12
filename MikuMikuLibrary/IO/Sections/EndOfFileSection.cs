@@ -1,31 +1,24 @@
 ﻿using MikuMikuLibrary.IO.Common;
-using System.IO;
 
 namespace MikuMikuLibrary.IO.Sections
 {
-    [Section( "EOFC", typeof( object ) )]
-    public class EndOfFileSection : Section
+    [Section( "EOFC" )]
+    public class EndOfFileSection : Section<object>
     {
+        public override SectionFlags Flags => SectionFlags.None;
         public override Endianness Endianness => Endianness.LittleEndian;
         public override AddressSpace AddressSpace => AddressSpace.Int32;
 
-        public override SectionFlags Flags => SectionFlags.None;
-
-        protected override void Read( EndianBinaryReader reader, long length )
+        protected override void Read( object dataObject, EndianBinaryReader reader, long length )
         {
         }
 
-        protected override void Write( EndianBinaryWriter writer )
+        protected override void Write( object dataObject, EndianBinaryWriter writer )
         {
         }
 
-        public EndOfFileSection( Stream source, object dataToRead = null ) : base( source, dataToRead )
+        public EndOfFileSection( SectionMode mode, object dataObject = null ) : base( mode, dataObject )
         {
         }
-
-        public EndOfFileSection( object dataToWrite ) : base( dataToWrite, Endianness.LittleEndian, AddressSpace.Int32 )
-        {
-        }
-
     }
 }

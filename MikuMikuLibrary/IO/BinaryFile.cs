@@ -3,6 +3,7 @@ using MikuMikuLibrary.IO.Sections;
 using System;
 using System.IO;
 using System.Text;
+using System.Linq;
 
 namespace MikuMikuLibrary.IO
 {
@@ -54,7 +55,7 @@ namespace MikuMikuLibrary.IO
             bool readAsSection = false;
 
             // Attempt to detect the section format and read with that
-            if ( Flags.HasFlag( BinaryFileFlags.HasModernVersion ) )
+            if ( Flags.HasFlag( BinaryFileFlags.HasSectionedVersion ) )
             {
                 long position = source.Position;
                 var signatureBytes = new byte[ 4 ];
@@ -62,12 +63,10 @@ namespace MikuMikuLibrary.IO
                 source.Seek( position, SeekOrigin.Begin );
 
                 var signature = Encoding.ASCII.GetString( signatureBytes );
-                if ( SectionManager.SectionInfosBySignature.TryGetValue( signature, out SectionInfo sectionInfo ) )
+                if ( SectionRegistry.SectionInfosBySignature.TryGetValue( signature, out SectionInfo sectionInfo ) )
                 {
-                    var section = sectionInfo.Read( source, this );
-
-                    Format = section.Format;
-                    Endianness = section.Endianness;
+                    var section = sectionInfo.Create( SectionMode.Read, this );
+                    section.Read( source );
 
                     readAsSection = true;
                 }
@@ -115,7 +114,7 @@ namespace MikuMikuLibrary.IO
                 throw new NotSupportedException( "Binary file is not able to save" );
 
             // See if we are supposed to write in sectioned format
-            if ( Flags.HasFlag( BinaryFileFlags.HasModernVersion ) && BinaryFormatUtilities.IsModern( Format ) )
+            if ( Flags.HasFlag( BinaryFileFlags.HasSectionedVersion ) && BinaryFormatUtilities.IsModern( Format ) )
                 GetSectionInstanceForWriting().Write( destination );
 
             else
@@ -191,12 +190,15 @@ namespace MikuMikuLibrary.IO
             Save( new FileStream( filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite ), false );
         }
 
-        protected virtual Section GetSectionInstanceForWriting()
+        protected virtual ISection GetSectionInstanceForWriting()
         {
-            if ( SectionManager.SingleSectionInfosByDataType.TryGetValue( GetType(), out SectionInfo sectionInfo ) )
-                return sectionInfo.Create( this, Endianness, BinaryFormatUtilities.GetAddressSpace( Format ) );
-            else
-                throw new NotImplementedException( "Section writing is not yet implemented" );
+            var type = GetType();
+            var sectionInfo = SectionRegistry.SectionInfos.FirstOrDefault( x => x.DataType == type );
+
+            if ( sectionInfo == null )
+                throw new NotImplementedException();
+
+            return sectionInfo.Create( SectionMode.Write, this );
         }
 
         public void Dispose()
@@ -220,7 +222,7 @@ namespace MikuMikuLibrary.IO
             Dispose( false );
         }
 
-        public abstract void Read( EndianBinaryReader reader, Section section = null );
-        public abstract void Write( EndianBinaryWriter writer, Section section = null );
+        public abstract void Read( EndianBinaryReader reader, ISection section = null );
+        public abstract void Write( EndianBinaryWriter writer, ISection section = null );
     }
 }
