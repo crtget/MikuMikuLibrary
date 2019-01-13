@@ -2,8 +2,8 @@
 using MikuMikuLibrary.IO.Sections;
 using System;
 using System.IO;
-using System.Text;
 using System.Linq;
+using System.Text;
 
 namespace MikuMikuLibrary.IO
 {
@@ -52,41 +52,64 @@ namespace MikuMikuLibrary.IO
                 mOwnsStream = !leaveOpen;
             }
 
-            bool readAsSection = false;
+            if ( !( Flags.HasFlag( BinaryFileFlags.HasSectionedVersion ) && ReadModern() ) )
+                ReadClassic();
 
-            // Attempt to detect the section format and read with that
-            if ( Flags.HasFlag( BinaryFileFlags.HasSectionedVersion ) )
+            if ( !leaveOpen && !Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) )
+                source.Dispose();
+
+            bool ReadModern()
             {
-                long position = source.Position;
-                var signatureBytes = new byte[ 4 ];
-                source.Read( signatureBytes, 0, signatureBytes.Length );
-                source.Seek( position, SeekOrigin.Begin );
-
-                var signature = Encoding.ASCII.GetString( signatureBytes );
-                if ( SectionRegistry.SectionInfosBySignature.TryGetValue( signature, out SectionInfo sectionInfo ) )
+                var bytes = new byte[ 4 ];
+                string ReadSignature()
                 {
-                    var section = sectionInfo.Create( SectionMode.Read, this );
-                    section.Read( source );
-
-                    readAsSection = true;
+                    source.Read( bytes, 0, bytes.Length );
+                    return Encoding.UTF8.GetString( bytes );
                 }
+
+                long current = source.Position;
+                {
+                    var signature = ReadSignature();
+
+                    if ( SectionRegistry.SectionInfosBySignature.TryGetValue( signature, out SectionInfo sectionInfo ) )
+                    {
+                        using ( var section = sectionInfo.Create( SectionMode.Read, this ) )
+                        {
+                            section.Read( source, true );
+
+                            while ( source.Position < source.Length )
+                            {
+                                signature = ReadSignature();
+                                sectionInfo = SectionRegistry.SectionInfosBySignature[ signature ];
+
+                                using ( var siblingSection = sectionInfo.Create( SectionMode.Read ) )
+                                {
+                                    if ( siblingSection is EndOfFileSection )
+                                        break;
+                                    else if ( section.SectionInfo.SubSectionInfos.TryGetValue( sectionInfo, out var subSectionInfo ) )
+                                        subSectionInfo.ProcessPropertyForReading( siblingSection, section );
+                                }
+                            }
+                        }
+
+                        return true;
+                    }
+                }
+
+                source.Seek( current, SeekOrigin.Begin );
+                return false;
             }
 
-            if ( !readAsSection )
+            void ReadClassic()
             {
-                // Or try to read in the old fashioned way
                 using ( var reader = new EndianBinaryReader( source, Encoding.UTF8, true, Endianness ) )
                 {
                     reader.PushBaseOffset();
                     {
                         Read( reader );
                     }
-                    reader.PopBaseOffset();
                 }
             }
-
-            if ( !leaveOpen && !Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) )
-                source.Dispose();
         }
 
         public virtual void Load( string filePath )
@@ -113,29 +136,11 @@ namespace MikuMikuLibrary.IO
             if ( !Flags.HasFlag( BinaryFileFlags.Save ) )
                 throw new NotSupportedException( "Binary file is not able to save" );
 
-            // See if we are supposed to write in sectioned format
             if ( Flags.HasFlag( BinaryFileFlags.HasSectionedVersion ) && BinaryFormatUtilities.IsModern( Format ) )
-                GetSectionInstanceForWriting().Write( destination );
+                WriteModern();
 
             else
-            {
-                // Or try to write in the old fashioned way
-                using ( var writer = new EndianBinaryWriter( destination, Encoding.UTF8, true, Endianness ) )
-                {
-                    writer.PushBaseOffset();
-                    {
-                        // Push a string table
-                        writer.PushStringTable( 16, AlignmentMode.Center, StringBinaryFormat.NullTerminated );
-                        {
-                            Write( writer );
-                        }
-                        // Do the enqueued offset writes & string tables
-                        writer.DoScheduledWriteOffsets();
-                        writer.PopStringTablesReversed();
-                    }
-                    writer.PopBaseOffset();
-                }
-            }
+                WriteClassic();
 
             // Adopt this stream
             if ( Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) )
@@ -151,6 +156,37 @@ namespace MikuMikuLibrary.IO
             else if ( !leaveOpen )
             {
                 destination.Close();
+            }
+
+            void WriteModern()
+            {
+                using ( var section = GetSectionInstanceForWriting() )
+                {
+                    section.Write( destination );
+
+                    foreach ( var subSection in section.Sections.Where( x => x.SectionInfo.IsBinaryFileType ) )
+                        subSection.Write( destination );
+
+                    using ( var eofSection = new EndOfFileSection( SectionMode.Write, this ) )
+                        eofSection.Write( destination );
+                }
+            }
+
+            void WriteClassic()
+            {
+                using ( var writer = new EndianBinaryWriter( destination, Encoding.UTF8, true, Endianness ) )
+                {
+                    writer.PushBaseOffset();
+                    {
+                        // Push a string table
+                        writer.PushStringTable( 16, AlignmentMode.Center, StringBinaryFormat.NullTerminated );
+                        {
+                            Write( writer );
+                        }
+                        writer.DoScheduledWriteOffsets();
+                        writer.PopStringTablesReversed();
+                    }
+                }
             }
         }
 
@@ -193,9 +229,8 @@ namespace MikuMikuLibrary.IO
         protected virtual ISection GetSectionInstanceForWriting()
         {
             var type = GetType();
-            var sectionInfo = SectionRegistry.SectionInfos.FirstOrDefault( x => x.DataType == type );
 
-            if ( sectionInfo == null )
+            if ( !SectionRegistry.SingleSectionInfosByDataType.TryGetValue( type, out var sectionInfo ) )
                 throw new NotImplementedException();
 
             return sectionInfo.Create( SectionMode.Write, this );

@@ -91,7 +91,7 @@ namespace MikuMikuLibrary.Models
             }
             else
             {
-                var indexReader = section.IndexData.BaseReader;
+                var indexReader = section.IndexData.Reader;
 
                 indexReader.SeekBegin( section.IndexData.DataOffset + indicesOffset );
                 Indices = indexReader.ReadUInt16s( indexCount );

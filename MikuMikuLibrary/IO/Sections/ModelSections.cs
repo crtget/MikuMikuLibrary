@@ -32,10 +32,10 @@ namespace MikuMikuLibrary.IO.Sections
         }
 
         [SubSection]
-        public MeshIndexDataSection IndexData { get; }
+        public MeshIndexDataSection IndexData { get; set; }
 
         [SubSection]
-        public MeshVertexDataSection VertexData { get; }
+        public MeshVertexDataSection VertexData { get; set; }
 
         protected override void Read( Mesh dataObject, EndianBinaryReader reader, long length ) =>
             dataObject.Read( reader, this );
@@ -65,6 +65,7 @@ namespace MikuMikuLibrary.IO.Sections
         }
     }
 
+    [Section( "OVTX" )]
     public class MeshVertexDataSection : Section<object>
     {
         private readonly List<SubMesh> mSubMeshes;
@@ -123,6 +124,7 @@ namespace MikuMikuLibrary.IO.Sections
         }
     }
 
+    [Section( "OIDX" )]
     public class MeshIndexDataSection : Section<object>
     {
         private readonly List<ushort[]> mIndices;

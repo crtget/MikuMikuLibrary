@@ -13,6 +13,7 @@ namespace MikuMikuLibrary.IO.Sections
         public Type SectionType { get; }
         public string Signature { get; }
         public Type DataType { get; }
+        public bool IsBinaryFileType { get; }
 
         public IReadOnlyDictionary<SectionInfo, SubSectionInfo> SubSectionInfos => mSubSectionInfos;
 
@@ -24,19 +25,25 @@ namespace MikuMikuLibrary.IO.Sections
             SectionType = sectionType;
 
             var attribute = sectionType.GetCustomAttribute<SectionAttribute>();
+            if ( attribute == null )
+                throw new ArgumentException( "Section type is missing section attribute", nameof( sectionType ) );
 
             Signature = attribute.Signature;
-            if ( typeof( Section<> ).IsAssignableFrom( sectionType ) )
-            {
-                var baseType = sectionType.BaseType;
-                while ( baseType != typeof( Section<> ) )
-                    baseType = baseType.BaseType;
 
-                var genericArgs = baseType.GetGenericArguments();
-                DataType = genericArgs[ 0 ];
+            for ( var type = sectionType.BaseType; type != null; type = type.BaseType )
+            {
+                var genericTypeDefinition = type.GetGenericTypeDefinition();
+                if ( type.IsGenericType && type.GetGenericTypeDefinition() == typeof( Section<> ) )
+                {
+                    DataType = type.GetGenericArguments()[ 0 ];
+                    break;
+                }
             }
-            else
+
+            if ( DataType == null )
                 DataType = attribute.DataType;
+
+            IsBinaryFileType = typeof( IBinaryFile ).IsAssignableFrom( DataType );
 
             foreach ( var propertyInfo in sectionType.GetProperties() )
             {
@@ -111,27 +118,36 @@ namespace MikuMikuLibrary.IO.Sections
             }
         }
 
-        public SubSectionInfo( PropertyInfo propertyInfo )
+        internal SubSectionInfo( PropertyInfo propertyInfo )
         {
             var subSectionAttribute = propertyInfo.GetCustomAttribute<SubSectionAttribute>();
 
-            IsListType = typeof( List<> ).IsAssignableFrom( propertyInfo.PropertyType );
-            if ( IsListType )
+            Type genericType = null;
+            for ( var type = propertyInfo.PropertyType; type != null; type = type.BaseType )
             {
-                var genericArgs = propertyInfo.PropertyType.GetGenericArguments();
-                IsSectionType = typeof( ISection ).IsAssignableFrom( genericArgs[ 0 ] );
+                if ( type.IsGenericType && type.GetGenericTypeDefinition() == typeof( List<> ) )
+                {
+                    genericType = type.GetGenericArguments()[ 0 ];
+                    break;
+                }
+            }
+
+            if ( genericType != null )
+            {
+                IsListType = true;
+                IsSectionType = typeof( ISection ).IsAssignableFrom( genericType );
 
                 if ( IsSectionType )
-                    SectionInfo = SectionRegistry.GetOrRegisterSectionInfo( genericArgs[ 0 ] );
+                    SectionInfo = SectionRegistry.GetOrRegisterSectionInfo( genericType );
                 else
                     SectionInfo = SectionRegistry.GetOrRegisterSectionInfo( subSectionAttribute.SectionType );
             }
             else
             {
-                IsSectionType = typeof( ISection ).IsAssignableFrom( PropertyInfo.PropertyType );
+                IsSectionType = typeof( ISection ).IsAssignableFrom( propertyInfo.PropertyType );
 
                 if ( IsSectionType )
-                    SectionInfo = SectionRegistry.GetOrRegisterSectionInfo( PropertyInfo.PropertyType );
+                    SectionInfo = SectionRegistry.GetOrRegisterSectionInfo( propertyInfo.PropertyType );
                 else
                     SectionInfo = SectionRegistry.GetOrRegisterSectionInfo( subSectionAttribute.SectionType );
             }

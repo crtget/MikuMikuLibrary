@@ -12,7 +12,7 @@ namespace MikuMikuLibrary.Sprites
             BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionedVersion;
 
         public List<Sprite> Sprites { get; }
-        public TextureSet TextureSet { get; }
+        public TextureSet TextureSet { get; internal set; }
 
         public override void Read( EndianBinaryReader reader, ISection section = null )
         {
@@ -25,7 +25,10 @@ namespace MikuMikuLibrary.Sprites
             long spriteNamesOffset = reader.ReadOffset();
             long spriteUnknownsOffset = reader.ReadOffset();
 
-            reader.ReadAtOffsetIf( section == null, texturesOffset, () => TextureSet.Load( reader.BaseStream, true ) );
+            reader.ReadAtOffsetIf( section == null, texturesOffset, () =>
+            {
+                TextureSet.Load( reader.BaseStream, true );
+            } );
 
             Sprites.Capacity = spriteCount;
             reader.ReadAtOffset( spritesOffset, () =>

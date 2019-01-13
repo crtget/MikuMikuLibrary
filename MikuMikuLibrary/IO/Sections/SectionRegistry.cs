@@ -9,10 +9,12 @@ namespace MikuMikuLibrary.IO.Sections
     {
         private static readonly Dictionary<Type, SectionInfo> sSectionInfosBySectionType = new Dictionary<Type, SectionInfo>();
         private static readonly Dictionary<string, SectionInfo> sSectionInfosBySignature = new Dictionary<string, SectionInfo>();
+        private static readonly Dictionary<Type, SectionInfo> sSingleSectionInfosByDataType = new Dictionary<Type, SectionInfo>();
 
         public static IEnumerable<SectionInfo> SectionInfos => sSectionInfosBySectionType.Values;
         public static IReadOnlyDictionary<Type, SectionInfo> SectionInfosBySectionType => sSectionInfosBySectionType;
         public static IReadOnlyDictionary<string, SectionInfo> SectionInfosBySignature => sSectionInfosBySignature;
+        public static IReadOnlyDictionary<Type, SectionInfo> SingleSectionInfosByDataType => sSingleSectionInfosByDataType;
 
         public static SectionInfo GetOrRegisterSectionInfo( Type sectionType )
         {
@@ -21,6 +23,7 @@ namespace MikuMikuLibrary.IO.Sections
                 sectionInfo = new SectionInfo( sectionType );
                 sSectionInfosBySectionType[ sectionType ] = sectionInfo;
                 sSectionInfosBySignature[ sectionInfo.Signature ] = sectionInfo;
+                sSingleSectionInfosByDataType[ sectionInfo.DataType ] = sectionInfo;
             }
 
             return sectionInfo;
@@ -33,7 +36,7 @@ namespace MikuMikuLibrary.IO.Sections
             var assembly = Assembly.GetExecutingAssembly();
 
             var types = assembly.GetTypes().Where(
-                x => typeof( Section<> ).IsAssignableFrom( x ) && x.IsClass && !x.IsAbstract );
+                x => typeof( ISection ).IsAssignableFrom( x ) && x.IsClass && !x.IsAbstract );
 
             foreach ( var type in types )
                 GetOrRegisterSectionInfo( type );

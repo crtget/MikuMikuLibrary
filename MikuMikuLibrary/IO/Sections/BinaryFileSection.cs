@@ -6,8 +6,8 @@ namespace MikuMikuLibrary.IO.Sections
     {
         protected override void Read( T dataObject, EndianBinaryReader reader, long length )
         {
-            dataObject.Endianness = Endianness;
             dataObject.Format = Format;
+            dataObject.Endianness = Endianness;
             {
                 dataObject.Read( reader, this );
             }

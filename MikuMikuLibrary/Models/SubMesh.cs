@@ -185,7 +185,7 @@ namespace MikuMikuLibrary.Models
                     bool hasUVChannel2 = false;
                     bool hasColors = false;
 
-                    var vertexReader = section.VertexData.BaseReader;
+                    var vertexReader = section.VertexData.Reader;
                     for ( int i = 0; i < vertexCount; i++ )
                     {
                         vertexReader.SeekBegin( section.VertexData.DataOffset + dataOffset + ( stride * i ) );
