@@ -1,14 +1,15 @@
-﻿using MikuMikuLibrary.IO;
+﻿using MikuMikuLibrary.Aet;
+using MikuMikuLibrary.IO;
+using MikuMikuLibrary.IO.Common;
 using MikuMikuModel.Configurations;
 using MikuMikuModel.DataNodes;
 using MikuMikuModel.DataNodes.Wrappers;
 using MikuMikuModel.FormatModules;
 using MikuMikuModel.GUI.Controls;
+using MikuMikuModel.GUI.Forms.Style;
 using System;
-using System.Data;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace MikuMikuModel.GUI.Forms
@@ -315,6 +316,11 @@ namespace MikuMikuModel.GUI.Forms
                 configurationsForm.ShowDialog(this);
         }
 
+        private void OnLoad(object sender, EventArgs e)
+        {
+            SetDarkMode();
+        }
+
         private void OnAbout(object sender, EventArgs e)
         {
             MessageBox.Show("MikuMikuModel by Skyth\nThis program is a work in progress.");
@@ -328,6 +334,25 @@ namespace MikuMikuModel.GUI.Forms
         private void OnPropertyValueChanged(object s, PropertyValueChangedEventArgs e)
         {
             treeView.SelectedDataNode?.NotifyPropertyChanged(e.ChangedItem.Label);
+        }
+
+        private void SetDarkMode()
+        {
+            DarkModeColorTable colorTable = DarkModeColorTable.Instance;
+
+            menuStrip.Renderer = new DarkModeToolStripRenderer(colorTable);
+
+            base.BackColor = colorTable.BackColor;
+            base.ForeColor = colorTable.ForeColor;
+
+            treeView.BackColor = colorTable.BackColor;
+            treeView.ForeColor = colorTable.ForeColor;
+            treeView.LineColor = colorTable.SeparatorLight;
+
+            propertyGrid.LineColor = colorTable.BorderColor;
+            propertyGrid.SelectedItemWithFocusBackColor = colorTable.BorderColor;
+            propertyGrid.ViewBackColor = colorTable.BackColor;
+            propertyGrid.ViewForeColor = colorTable.ForeColor;
         }
     }
 }

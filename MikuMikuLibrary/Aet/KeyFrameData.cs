@@ -79,7 +79,7 @@ namespace MikuMikuLibrary.Aet
 
         public override string ToString()
         {
-            return $"Key Frames: {KeyFrames?.Count}";
+            return $"{nameof(KeyFrame)}s: {KeyFrames?.Count}";
         }
     }
 }

@@ -35,7 +35,7 @@ namespace MikuMikuLibrary.Aet
 
         public override string ToString()
         {
-            return $"Frame: {Frame} : {Name}";
+            return $"{nameof(Frame)}: {Frame} : {Name}";
         }
     }
 }

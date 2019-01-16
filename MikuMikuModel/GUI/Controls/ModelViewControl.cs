@@ -33,6 +33,10 @@ namespace MikuMikuModel.GUI.Controls
             instance?.Dispose();
         }
 
+        private const float SPEED = 0.1f;
+        private const float FAST_SPEED = 0.8f;
+        private const float SLOW_SPEED = 0.025f;
+
         private IGLDraw model;
         private GLShaderProgram defaultShader;
         private GLShaderProgram lineShader;
@@ -141,11 +145,17 @@ namespace MikuMikuModel.GUI.Controls
 
             camDir = Vector3.Normalize(front);
 
-            float cameraSpeed = ModifierKeys.HasFlag(Keys.Shift) ? 0.8f : ModifierKeys.HasFlag(Keys.Control) ? 0.025f : 0.1f;
-            if (up) camPos += camDir * cameraSpeed;
-            else if (down) camPos -= camDir * cameraSpeed;
-            if (left) camPos -= Vector3.Normalize(Vector3.Cross(camDir, camUp)) * cameraSpeed;
-            else if (right) camPos += Vector3.Normalize(Vector3.Cross(camDir, camUp)) * cameraSpeed;
+            float cameraSpeed = ModifierKeys.HasFlag(Keys.Shift) ? FAST_SPEED : ModifierKeys.HasFlag(Keys.Control) ? SLOW_SPEED : SPEED;
+
+            if (up)
+                camPos += camDir * cameraSpeed;
+            else if (down)
+                camPos -= camDir * cameraSpeed;
+
+            if (left)
+                camPos -= Vector3.Normalize(Vector3.Cross(camDir, camUp)) * cameraSpeed;
+            else if (right)
+                camPos += Vector3.Normalize(Vector3.Cross(camDir, camUp)) * cameraSpeed;
         }
 
         private Matrix4 GetViewMatrix()
@@ -242,6 +252,7 @@ namespace MikuMikuModel.GUI.Controls
             if (e.Button == MouseButtons.Left)
             {
                 float cameraSpeed = ModifierKeys.HasFlag(Keys.Shift) ? 0.04f : ModifierKeys.HasFlag(Keys.Control) ? 0.00125f : 0.005f;
+
                 var dirRight = Vector3.Normalize(Vector3.Cross(camDir, camUp));
                 var dirUp = Vector3.Normalize(Vector3.Cross(camDir, dirRight));
                 camPos -= ((dirRight * deltaX) + (dirUp * deltaY)) * cameraSpeed;
