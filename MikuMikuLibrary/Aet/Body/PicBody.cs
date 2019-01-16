@@ -63,7 +63,7 @@ namespace MikuMikuLibrary.Aet.Body
             //writer.Write(UnknownOffset);
             writer.Write(0x0);
 
-            writer.EnqueueOffsetWrite(() =>
+            writer.ScheduleWriteOffset(() =>
             {
                 AnimationData.Write(writer);
             });

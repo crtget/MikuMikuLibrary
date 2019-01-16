@@ -1,313 +1,274 @@
 ﻿using MikuMikuLibrary.IO.Common;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 
 namespace MikuMikuLibrary.IO.Sections
 {
-    public abstract class Section
+    public abstract class Section<T> : ISection where T : new()
     {
-        protected readonly List<Section> sections;
-        protected Section parent;
-        protected Endianness endianness;
-        protected AddressSpace addressSpace;
+        private readonly List<ISection> mSections = new List<ISection>();
+        private T mDataObject;
+        private bool mIsObjectProcessed;
+        private bool mIsProcessingObject;
+
+        public T DataObject
+        {
+            get
+            {
+                if ( !mIsObjectProcessed && !mIsProcessingObject )
+                    ProcessDataObject();
+
+                return mDataObject;
+            }
+        }
+
+        object ISection.DataObject => DataObject;
+
+        public Type DataType => typeof( T );
+
+        public string Signature => SectionInfo.Signature;
 
         public abstract SectionFlags Flags { get; }
 
         public SectionInfo SectionInfo { get; }
 
-        public Section Parent
-        {
-            get { return parent; }
-        }
+        public IEnumerable<ISection> Sections => mSections;
 
-        public int Depth
-        {
-            get { return Parent != null ? Parent.Depth + 1 : 0; }
-        }
+        public Stream BaseStream { get; private set; }
 
-        public object Data { get; }
+        public SectionMode Mode { get; }
 
-        public virtual Endianness Endianness
-        {
-            get { return endianness; }
-        }
+        public long DataOffset { get; private set; }
 
-        public virtual AddressSpace AddressSpace
-        {
-            get { return addressSpace; }
-        }
+        public long DataSize { get; private set; }
 
-        // Something like helper
-        public BinaryFormat Format
-        {
-            get { return AddressSpace == AddressSpace.Int64 ? BinaryFormat.X : BinaryFormat.F2nd; }
-        }
+        public long SectionSize { get; private set; }
 
-        public IEnumerable<Section> EnumerateSections()
-        {
-            return sections;
-        }
+        public virtual Endianness Endianness { get; set; }
 
-        public IEnumerable<Section> EnumerateSections( string sig )
-        {
-            return sections.Where( x => x.SectionInfo.Signature == sig );
-        }
+        public virtual AddressSpace AddressSpace { get; set; }
 
-        public IEnumerable<T> EnumerateSections<T>() where T : Section
-        {
-            return sections.Where( x => x is T ).Cast<T>();
-        }
+        public BinaryFormat Format => BinaryFormatUtilities.GetFormat( AddressSpace );
 
-        public void Add( Section section )
-        {
-            section.Remove();
-            section.parent = this;
-            sections.Add( section );
-        }
+        public EndianBinaryReader Reader { get; private set; }
 
-        public void Insert( int index, Section section )
-        {
-            section.Remove();
-            section.parent = this;
-            sections.Insert( index, section );
-        }
+        public EndianBinaryWriter Writer { get; private set; }
 
-        public void Remove()
+        private void Read( Stream source, bool skipSignature )
         {
-            if ( Parent != null )
-                Parent.Remove( this );
-        }
+            if ( Mode == SectionMode.Write )
+                throw new InvalidOperationException( "Section is in write mode, cannot read" );
 
-        public void Remove( Section section )
-        {
-            if ( sections.Contains( section ) )
+            if ( BaseStream != null )
+                throw new InvalidOperationException( "Section has already been read before" );
+
+            BaseStream = source;
+            Reader = new EndianBinaryReader( BaseStream, Encoding.UTF8, true, Endianness.LittleEndian );
+
+            if ( skipSignature )
+                Reader.PushBaseOffset( Reader.Position - 4 );
+            else
             {
-                section.parent = null;
-                sections.Remove( section );
+                Reader.PushBaseOffset();
+
+                string signature = Reader.ReadString( StringBinaryFormat.FixedLength, 4 );
+                if ( signature != Signature )
+                    throw new InvalidDataException( $"Invalid signature (expected {Signature}, got {signature})" );
             }
-        }
 
-        public void Read( Stream source )
-        {
-            using ( var reader = new EndianBinaryReader( source, Encoding.UTF8, true, Endianness.LittleEndian ) )
+            SectionSize = Reader.ReadUInt32();
+            DataOffset = Reader.BaseOffset + Reader.ReadUInt32();
+            int endiannessFlag = Reader.ReadInt32();
+            Endianness = ( endiannessFlag == 0x18000000 ) ? Endianness.BigEndian : Endianness.LittleEndian;
+            int depth = Reader.ReadInt32();
+            DataSize = Reader.ReadUInt32();
+
+            if ( ( SectionSize - DataSize ) != 0 )
             {
-                reader.PushBaseOffset();
-
-                var signature = reader.ReadString( StringBinaryFormat.FixedLength, 4 );
-                if ( signature != SectionInfo.Signature )
-                    throw new InvalidDataException( $"Invalid signature (expected {SectionInfo.Signature}, got {signature}" );
-
-                uint sectionSize = reader.ReadUInt32();
-                uint dataOffset = reader.ReadUInt32();
-                int endiannessFlag = reader.ReadInt32();
-                endianness = endiannessFlag == 0x18000000 ? Endianness.BigEndian : Endianness.LittleEndian;
-                int depth = reader.ReadInt32();
-                uint dataSize = reader.ReadUInt32();
-
-                // Read the sections first because if the Read methods want to access child sections
-                // this will let them do so
-                reader.ReadAtOffsetIf( ( sectionSize - dataSize ) != 0, dataOffset + dataSize, () =>
+                Reader.SeekBegin( DataOffset + DataSize );
                 {
-                    while ( reader.Position < ( reader.PeekBaseOffset() + dataOffset + sectionSize ) )
+                    while ( Reader.Position < ( DataOffset + SectionSize ) )
                     {
-                        reader.PushOffset();
+                        var subSectionSignature = Reader.ReadString( StringBinaryFormat.FixedLength, 4 );
+                        var sectionInfo = SectionRegistry.SectionInfosBySignature[ subSectionSignature ];
 
-                        Section subSection;
-                        var subSectionSignature = reader.ReadString( StringBinaryFormat.FixedLength, 4 );
-
-                        // Skip the section if it couldn't be detected.
-                        if ( !SectionManager.SectionInfosBySignature.ContainsKey( subSectionSignature ) )
+                        var section = sectionInfo.Create( SectionMode.Read );
                         {
-                            Debug.WriteLine( $"WARNING: Unknown section signature {subSectionSignature}" );
-
-                            uint subSectionSize = reader.ReadUInt32();
-                            uint subSectionDataOffset = reader.ReadUInt32();
-
-                            reader.SeekBegin( reader.PopOffset() + subSectionDataOffset + subSectionSize );
-                            continue;
+                            section.Read( source, true );
+                            mSections.Add( section );
                         }
 
-                        reader.SeekBeginToPoppedOffset();
-                        if ( SectionInfo.SubSectionInfos.TryGetValue( subSectionSignature, out SubSectionInfo subSectionInfo ) )
-                            subSection = subSectionInfo.SetFromSection( this, source );
+                        if ( section is RelocationTableSectionInt64 )
+                            AddressSpace = AddressSpace.Int64;
 
-                        else
-                        {
-                            // Found no suitable property, simply parse it
-                            subSection = SectionManager.CreateSection(
-                                SectionManager.SectionInfosBySignature[ subSectionSignature ].SectionType, source );
-                        }
-
-                        if ( subSection is EndOfFileSection )
+                        else if ( section is EndOfFileSection )
                             break;
-
-                        else if ( subSection is RelocationTableSectionInt32 )
-                        {
-                            addressSpace = AddressSpace.Int32;
-                            continue;
-                        }
-
-                        else if ( subSection is RelocationTableSectionInt64 )
-                        {
-                            addressSpace = AddressSpace.Int64;
-                            continue;
-                        }
-
-                        Add( subSection );
                     }
-                } );
-
-                reader.ReadAtOffsetIfNotZero( dataOffset, () =>
-                {
-                    // 64-bit address space has offsets
-                    // relative to the start of data
-                    if ( addressSpace == AddressSpace.Int64 )
-                        reader.PushBaseOffset();
-
-                    reader.Endianness = endianness;
-                    reader.AddressSpace = addressSpace;
-                    Read( reader, dataSize );
-
-                    // Pop the offset we pushed for X
-                    if ( addressSpace == AddressSpace.Int64 )
-                        reader.PopBaseOffset();
-                } );
-
-                reader.SeekBegin( reader.PeekBaseOffset() + dataOffset + sectionSize );
-            }
-        }
-
-        public void Write( Stream destination )
-        {
-            using ( var writer = new EndianBinaryWriter( destination, Encoding.UTF8, true, Endianness.LittleEndian ) )
-            {
-                writer.PushBaseOffset();
-
-                // We will fill the header later
-                long headerOffset = writer.Position;
-                writer.WriteNulls( 0x20 );
-
-                long dataOffset = writer.Position;
-                {
-                    // 64-bit space has offsets
-                    // relative to the start of data
-                    if ( addressSpace == AddressSpace.Int64 )
-                        writer.PushBaseOffset();
-
-                    writer.Endianness = Endianness;
-                    writer.PushStringTable( 16, AlignmentKind.Center, StringBinaryFormat.NullTerminated );
-                    Write( writer );
-                    writer.DoEnqueuedOffsetWrites();
-                    writer.PopStringTablesReversed();
-                    writer.WriteAlignmentPadding( 16 );
-                    writer.Endianness = Endianness.LittleEndian;
                 }
-                long dataEndOffset = writer.Position;
-
-                long sectionsStartOffset = writer.Position;
-                {
-                    // Push enrs section
-                    if ( Flags.HasFlag( SectionFlags.EnrsSection ) )
-                    {
-                        Insert( 0, new EnrsSection( this ) );
-                    }
-
-                    // Push a relocation table if section makes use of them
-                    if ( Flags.HasFlag( SectionFlags.RelocationTableSection ) )
-                    {
-                        var positions = writer.OffsetPositions
-                            .Select( x => x - writer.PeekBaseOffset() ).Distinct().OrderBy( x => x ).ToList();
-
-                        if ( AddressSpace == AddressSpace.Int32 )
-                            Insert( 0, new RelocationTableSectionInt32( positions ) );
-                        else if ( AddressSpace == AddressSpace.Int64 )
-                            Insert( 0, new RelocationTableSectionInt64( positions ) );
-                        else
-                            throw new ArgumentException( nameof( AddressSpace ) );
-                    }
-
-                    // Create and push the subsections
-                    foreach ( var subSectionInfo in SectionInfo.SubSectionInfos.Values.OrderBy( x => x.Order ) )
-                    {
-                        if ( subSectionInfo.IsList )
-                        {
-                            foreach ( var section in subSectionInfo.GetSections( this, Endianness ) )
-                                Add( section );
-                        }
-                        else
-                        {
-                            Add( subSectionInfo.GetSection( this, Endianness ) );
-                        }
-                    }
-
-                    // Push an end of file section if there are any sections
-                    if ( sections.Any() )
-                        Add( new EndOfFileSection( this ) );
-
-                    // Write the sections
-                    foreach ( var section in sections )
-                        section.Write( destination );
-                }
-                long sectionEndOffset = writer.Position;
-
-                // Now we can fill the header
-                writer.WriteAtOffsetAndSeekBack( headerOffset, () =>
-                {
-                    writer.Write( SectionInfo.Signature, StringBinaryFormat.FixedLength, 4 );
-                    writer.Write( ( uint )( sectionEndOffset - dataOffset ) );
-                    writer.Write( ( uint )( dataOffset - writer.PeekBaseOffset() ) );
-                    writer.Write( Endianness == Endianness.LittleEndian ? 0x10000000 : 0x18000000 );
-                    writer.Write( Depth );
-                    writer.Write( ( uint )( dataEndOffset - dataOffset ) );
-                } );
             }
+            else
+                Reader.SeekBegin( DataOffset + SectionSize );
 
-            // If we got no parent, we need an end of file section
-            // at the end of our data
-            // Also check if we are not end of file section, we don't want stack overflow
-            if ( Parent == null && !( this is EndOfFileSection ) )
+            if ( AddressSpace == AddressSpace.Int64 )
+                Reader.BaseOffset = DataOffset;
+
+            Reader.Endianness = Endianness;
+            Reader.AddressSpace = AddressSpace;
+
+            // If an object was provided for reading, process it regardless
+            if ( !mIsObjectProcessed && mDataObject != null )
+                ProcessDataObject();
+        }
+
+        private void Write( Stream destination, int depth )
+        {
+            if ( Mode == SectionMode.Read )
+                throw new InvalidOperationException( "Section is in read mode, cannot write" );
+
+            if ( BaseStream != null )
+                throw new InvalidOperationException( "Section has already been written before" );
+
+            BaseStream = destination;
+            Writer = new EndianBinaryWriter( BaseStream, Encoding.UTF8, true, Endianness.LittleEndian );
+
+            long headerOffset = Writer.Position;
             {
-                var endOfFileSection = new EndOfFileSection( this );
-                endOfFileSection.Write( destination );
+                Writer.WriteNulls( 32 );
             }
 
-            // Get rid of the sections we added earlier
-            sections.RemoveAll( x => x is EndOfFileSection || x is RelocationTableSectionInt32 || x is RelocationTableSectionInt64 || x is EnrsSection );
+            DataOffset = Writer.Position;
+
+            if ( AddressSpace == AddressSpace.Int64 )
+                Writer.BaseOffset = DataOffset;
+            else
+                Writer.BaseOffset = headerOffset;
+
+            {
+                Writer.Endianness = Endianness;
+                Writer.AddressSpace = AddressSpace;
+                {
+                    Writer.PushStringTable( 16, AlignmentMode.Left, StringBinaryFormat.NullTerminated );
+                    {
+                        Write( mDataObject, Writer );
+                    }
+                    Writer.PerformScheduledWrites();
+                    Writer.PopStringTablesReversed();
+                }
+                Writer.Endianness = Endianness.LittleEndian;
+                Writer.AddressSpace = AddressSpace.Int32;
+                Writer.WriteAlignmentPadding( 16 );
+            }
+
+            DataSize = Writer.Position - DataOffset;
+
+            ProcessDataObject();
+            {
+                foreach ( var section in mSections.Where( x => !x.SectionInfo.IsBinaryFileType ) )
+                {
+                    section.Endianness = Endianness;
+                    section.AddressSpace = AddressSpace;
+                    section.Write( BaseStream, depth + 1 );
+                }
+            }
+
+            SectionSize = Writer.Position - DataOffset;
+
+            Writer.WriteAtOffset( headerOffset, () =>
+            {
+                Writer.Write( Signature, StringBinaryFormat.FixedLength, 4 );
+                Writer.Write( ( uint )SectionSize );
+                Writer.Write( ( uint )( DataOffset - headerOffset ) );
+                Writer.Write( Endianness == Endianness.BigEndian ? 0x18000000 : 0x10000000 );
+                Writer.Write( depth );
+                Writer.Write( ( uint )DataSize );
+            } );
         }
 
-        protected abstract void Read( EndianBinaryReader reader, long length );
+        public void Read( Stream source ) => Read( source, false );
+        public void Write( Stream destination ) => Write( destination, 0 );
 
-        protected abstract void Write( EndianBinaryWriter writer );
+        void ISection.Read( Stream source, bool skipSignature ) => Read( source, skipSignature );
+        void ISection.Write( Stream destination, int depth ) => Write( destination, depth );
 
-        public Section( Stream source, object dataToRead = null )
+        public virtual void Dispose()
         {
-            sections = new List<Section>();
-            SectionInfo = SectionManager.GetOrRegister( GetType() );
+            Reader?.Dispose();
+            Writer?.Dispose();
 
-            // Try calling a default constructor if the data is null
-            Data = dataToRead ?? Activator.CreateInstance( SectionInfo.DataType );
-            Read( source );
+            foreach ( var section in mSections )
+                section.Dispose();
         }
 
-        public Section( object dataToWrite, Endianness endianness )
+        private void ProcessDataObject()
         {
-            sections = new List<Section>();
-            this.endianness = endianness;
-            SectionInfo = SectionManager.GetOrRegister( GetType() );
+            mIsProcessingObject = true;
 
-            Data = dataToWrite ?? throw new ArgumentNullException( nameof( dataToWrite ) );
+            if ( Mode == SectionMode.Read )
+            {
+                if ( BaseStream == null || Reader == null )
+                    throw new InvalidOperationException( "Section has not been read yet, cannot process data object" );
+
+                if ( mDataObject == null )
+                    mDataObject = new T();
+
+                foreach ( var section in mSections )
+                {
+                    if ( SectionInfo.SubSectionInfos.TryGetValue( section.SectionInfo, out var subSectionInfo ) )
+                        subSectionInfo.ProcessPropertyForReading( section, this );
+                }
+
+                Reader.SeekBegin( DataOffset );
+                {
+                    Read( mDataObject, Reader, DataSize );
+                }
+                Reader.SeekBegin( DataOffset + SectionSize );
+            }
+            else if ( Mode == SectionMode.Write )
+            {
+                if ( BaseStream == null || Writer == null )
+                    throw new InvalidOperationException( "Data object has not been written yet, cannot process data object" );
+
+                mSections.Clear();
+                if ( Writer.OffsetPositions.Count > 0 && Flags.HasFlag( SectionFlags.HasRelocationTable ) )
+                {
+                    ISection relocationTableSection;
+
+                    var offsets = Writer.OffsetPositions.Select( x => x - Writer.BaseOffset ).ToList();
+                    if ( AddressSpace == AddressSpace.Int64 )
+                        relocationTableSection = new RelocationTableSectionInt64( SectionMode.Write, offsets );
+                    else
+                        relocationTableSection = new RelocationTableSectionInt32( SectionMode.Write, offsets );
+
+                    mSections.Add( relocationTableSection );
+                }
+
+                foreach ( var subSectionInfo in SectionInfo.SubSectionInfos.Values.OrderBy( x => x.Priority ) )
+                    mSections.AddRange( subSectionInfo.ProcessPropertyForWriting( this ) );
+
+                if ( mSections.Count > 0 )
+                    mSections.Add( new EndOfFileSection( SectionMode.Write, this ) );
+            }
+
+            mIsObjectProcessed = true;
+            mIsProcessingObject = false;
+        }
+
+        protected abstract void Read( T dataObject, EndianBinaryReader reader, long length );
+        protected abstract void Write( T dataObject, EndianBinaryWriter writer );
+
+        public Section( SectionMode mode, T dataObject = default( T ) )
+        {
+            var type = GetType();
+            SectionInfo = SectionRegistry.GetOrRegisterSectionInfo( type );
+
+            Mode = mode;
+            mDataObject = dataObject;
+
+            if ( Mode == SectionMode.Write && mDataObject == null )
+                throw new ArgumentNullException( "Data object must be provided in write mode", nameof( dataObject ) );
         }
     }
-
-    [Flags]
-    public enum SectionFlags
-    {
-        None = 0,
-        RelocationTableSection = 1,
-        EnrsSection = 2,
-    };
 }

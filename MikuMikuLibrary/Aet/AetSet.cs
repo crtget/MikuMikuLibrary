@@ -39,7 +39,7 @@ namespace MikuMikuLibrary.Aet
             return;
         }
 
-        public override void Read(EndianBinaryReader reader, Section section = null)
+        public override void Read(EndianBinaryReader reader, ISection section = null)
         {
             // header
             int mainMetadataOffset = reader.ReadInt32();
@@ -73,7 +73,7 @@ namespace MikuMikuLibrary.Aet
             }
         }
 
-        public override void Write(EndianBinaryWriter writer, Section section = null)
+        public override void Write(EndianBinaryWriter writer, ISection section = null)
         {
             writer.Write(0x0); // MAIN
             writer.Write(0x0); // TOUCH

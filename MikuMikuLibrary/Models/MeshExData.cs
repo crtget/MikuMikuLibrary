@@ -29,10 +29,7 @@ namespace MikuMikuLibrary.Models
 
     public class MeshExBlockConstraint : MeshExBlock
     {
-        public override string Kind
-        {
-            get { return "CNS"; }
-        }
+        public override string Signature => "CNS";
 
         public string Field10 { get; set; }
         public string Field11 { get; set; }
@@ -63,10 +60,10 @@ namespace MikuMikuLibrary.Models
 
         internal override void ReadBody( EndianBinaryReader reader )
         {
-            Field10 = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
-            Field11 = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+            Field10 = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
+            Field11 = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             Field12 = reader.ReadInt32();
-            Field13 = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+            Field13 = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             Field14 = reader.ReadSingle();
             Field15 = reader.ReadSingle();
             Field16 = reader.ReadSingle();
@@ -124,10 +121,7 @@ namespace MikuMikuLibrary.Models
 
     public class MeshExBlockMotion : MeshExBlock
     {
-        public override string Kind
-        {
-            get { return "MOT"; }
-        }
+        public override string Signature => "MOT";
 
         public string Name { get; set; }
         public List<int> BoneIDs { get; }
@@ -161,12 +155,12 @@ namespace MikuMikuLibrary.Models
         {
             writer.AddStringToStringTable( Name );
             writer.Write( BoneIDs.Count );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var value in BoneIDs )
                     writer.Write( value );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var value in BoneMatrices )
                     writer.Write( value );
@@ -182,10 +176,7 @@ namespace MikuMikuLibrary.Models
 
     public class MeshExBlockExpression : MeshExBlock
     {
-        public override string Kind
-        {
-            get { return "EXP"; }
-        }
+        public override string Signature => "EXP";
 
         public string BoneName { get; set; }
         public List<string> Expressions { get; }
@@ -199,7 +190,7 @@ namespace MikuMikuLibrary.Models
 
             Expressions.Capacity = expressionCount;
             for ( int i = 0; i < expressionCount; i++ )
-                Expressions.Add( reader.ReadStringPtr( StringBinaryFormat.NullTerminated ) );
+                Expressions.Add( reader.ReadStringOffset( StringBinaryFormat.NullTerminated ) );
         }
 
         internal override void WriteBody( EndianBinaryWriter writer )
@@ -221,10 +212,7 @@ namespace MikuMikuLibrary.Models
 
     public class MeshExBlockOsage : MeshExBlock
     {
-        public override string Kind
-        {
-            get { return "OSG"; }
-        }
+        public override string Signature => "OSG";
 
         public int Field00 { get; set; }
         public int Field01 { get; set; }
@@ -244,6 +232,9 @@ namespace MikuMikuLibrary.Models
 
         internal override void WriteBody( EndianBinaryWriter writer )
         {
+            if ( writer.AddressSpace == AddressSpace.Int64 )
+                writer.WriteNulls( 4 );
+
             writer.Write( Field00 );
             writer.Write( Field01 );
             writer.Write( Field02 );
@@ -254,7 +245,7 @@ namespace MikuMikuLibrary.Models
 
     public abstract class MeshExBlock
     {
-        public abstract string Kind { get; }
+        public abstract string Signature { get; }
 
         public string ParentName { get; set; }
         public Vector3 Position { get; set; }
@@ -263,7 +254,7 @@ namespace MikuMikuLibrary.Models
 
         internal virtual void Read( EndianBinaryReader reader )
         {
-            ParentName = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+            ParentName = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             Position = reader.ReadVector3();
             Rotation = reader.ReadVector3();
             Scale = reader.ReadVector3();
@@ -306,7 +297,7 @@ namespace MikuMikuLibrary.Models
 
     public class MeshExData
     {
-        public const int ByteSize = 0x60;
+        public const int BYTE_SIZE = 0x60;
 
         public List<MeshExOsageBoneEntry> OsageBones { get; }
         public List<string> OsageNames { get; }
@@ -341,14 +332,14 @@ namespace MikuMikuLibrary.Models
             {
                 OsageNames.Capacity = osageNameCount;
                 for ( int i = 0; i < osageNameCount; i++ )
-                    OsageNames.Add( reader.ReadStringPtr( StringBinaryFormat.NullTerminated ) );
+                    OsageNames.Add( reader.ReadStringOffset( StringBinaryFormat.NullTerminated ) );
             } );
 
             reader.ReadAtOffset( exBlocksOffset, () =>
             {
                 while ( true )
                 {
-                    string exBlockKind = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+                    string exBlockSignature = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
                     long exBlockDataOffset = reader.ReadOffset();
 
                     if ( exBlockDataOffset == 0 )
@@ -356,9 +347,9 @@ namespace MikuMikuLibrary.Models
 
                     MeshExBlock exBlock = null;
 
-                    reader.ReadAtOffsetAndSeekBack( exBlockDataOffset, () =>
+                    reader.ReadAtOffset( exBlockDataOffset, () =>
                     {
-                        switch ( exBlockKind )
+                        switch ( exBlockSignature )
                         {
                             case "OSG":
                                 exBlock = new MeshExBlockOsage();
@@ -373,7 +364,7 @@ namespace MikuMikuLibrary.Models
                                 exBlock = new MeshExBlockConstraint();
                                 break;
                             default:
-                                Debug.WriteLine( $"WARNING: Unknown ex-block type {exBlockKind}" );
+                                Debug.WriteLine( $"WARNING: Unknown ex-block type {exBlockSignature}" );
                                 break;
                         }
 
@@ -390,7 +381,7 @@ namespace MikuMikuLibrary.Models
             {
                 BoneNames.Capacity = boneNameCount;
                 for ( int i = 0; i < boneNameCount; i++ )
-                    BoneNames.Add( reader.ReadStringPtr( StringBinaryFormat.NullTerminated ) );
+                    BoneNames.Add( reader.ReadStringOffset( StringBinaryFormat.NullTerminated ) );
             } );
 
             reader.ReadAtOffset( exEntriesOffset, () =>
@@ -413,38 +404,38 @@ namespace MikuMikuLibrary.Models
             writer.Write( OsageNames.Count );
             writer.Write( OsageBones.Count );
             writer.WriteNulls( 4 );
-            writer.EnqueueOffsetWrite( 4, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () =>
             {
                 foreach ( var osageBone in OsageBones )
                     osageBone.Write( writer );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var value in OsageNames )
                     writer.AddStringToStringTable( value );
             } );
-            writer.EnqueueOffsetWrite( 4, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () =>
             {
                 foreach ( var exBlock in ExBlocks )
                 {
-                    writer.AddStringToStringTable( exBlock.Kind );
-                    writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () => exBlock.Write( writer ) );
+                    writer.AddStringToStringTable( exBlock.Signature );
+                    writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () => exBlock.Write( writer ) );
                 }
                 writer.WriteNulls( 8 );
             } );
             writer.Write( BoneNames.Count );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var value in BoneNames )
                     writer.AddStringToStringTable( value );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var entry in Entries )
                     entry.Write( writer );
                 writer.WriteNulls( 12 );
             } );
-            writer.WriteNulls( 28 );
+            writer.WriteNulls( writer.AddressSpace == AddressSpace.Int64 ? 32 : 28 );
         }
 
         public MeshExData()

@@ -1,7 +1,9 @@
-﻿using MikuMikuLibrary.Models;
+﻿using MikuMikuLibrary.IO;
+using MikuMikuLibrary.Models;
 using MikuMikuLibrary.Textures;
 using MikuMikuModel.Configurations;
 using MikuMikuModel.GUI.Controls;
+using MikuMikuModel.GUI.Forms;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,10 +17,7 @@ namespace MikuMikuModel.DataNodes
 {
     public class ModelNode : BinaryFileNode<Model>
     {
-        public override DataNodeFlags Flags
-        {
-            get { return DataNodeFlags.Branch; }
-        }
+        public override DataNodeFlags Flags => DataNodeFlags.Branch;
 
         public override DataNodeActionFlags ActionFlags
         {
@@ -39,10 +38,7 @@ namespace MikuMikuModel.DataNodes
             }
         }
 
-        public override Bitmap Icon
-        {
-            get { return Properties.Resources.Model; }
-        }
+        public override Bitmap Icon => Properties.Resources.Model;
 
         [Browsable( false )]
         public ListNode<Mesh> Meshes { get; set; }
@@ -93,10 +89,16 @@ namespace MikuMikuModel.DataNodes
                 data.TextureSet = Textures?.Data as TextureSet;
                 return data;
             } );
-            RegisterCustomHandler( "Set all shaders to BLINN", () =>
+            RegisterCustomHandler( "Rename all shaders to...", () =>
             {
-                foreach ( var material in Data.Meshes.SelectMany( x => x.Materials ) )
-                    material.Shader = "BLINN";
+                using ( var renameForm = new RenameForm( "BLINN" ) )
+                {
+                    if ( renameForm.ShowDialog() == DialogResult.OK )
+                    {
+                        foreach ( var material in Data.Meshes.SelectMany( x => x.Materials ) )
+                            material.Shader = renameForm.TextBoxText;
+                    }
+                }
 
                 HasPendingChanges = true;
             } );
@@ -112,6 +114,29 @@ namespace MikuMikuModel.DataNodes
                             indexTable.PrimitiveType = IndexTablePrimitiveType.TriangleStrip;
                             indexTable.Indices = triangleStrip;
                         }
+                    }
+                }
+
+                HasPendingChanges = true;
+            } );
+            RegisterCustomHandler( "Convert triangle strips to triangles", () =>
+            {
+                foreach ( var indexTable in Data.Meshes.SelectMany( x => x.SubMeshes ).SelectMany( x => x.IndexTables ) )
+                {
+                    if ( indexTable.PrimitiveType == IndexTablePrimitiveType.TriangleStrip )
+                    {
+                        var triangles = indexTable.GetTriangles();
+                        var indices = new ushort[ triangles.Count * 3 ];
+                        
+                        for ( int i = 0; i < triangles.Count; i++ )
+                        {
+                            indices[ ( i * 3 ) + 0 ] = triangles[ i ].A;
+                            indices[ ( i * 3 ) + 1 ] = triangles[ i ].B;
+                            indices[ ( i * 3 ) + 2 ] = triangles[ i ].C;
+                        }
+                        
+                        indexTable.PrimitiveType = IndexTablePrimitiveType.Triangles;
+                        indexTable.Indices = indices;
                     }
                 }
 
@@ -221,6 +246,14 @@ namespace MikuMikuModel.DataNodes
 
                 Add( Textures );
             }
+
+            if ( Textures != null && Textures.Data is TextureSet textureSet )
+            {
+                textureSet.Format = Data.Format;
+                textureSet.Endianness = Data.Endianness;
+
+                Textures.InitializeView();
+            }
         }
 
         protected override void OnReplace( object oldData )
@@ -250,12 +283,31 @@ namespace MikuMikuModel.DataNodes
                 }
             }
 
-            // Replace the texture set
-            Textures?.Replace( Data.TextureSet );
-
             // Pass the format/endianness
             Data.Format = oldDataT.Format;
             Data.Endianness = oldDataT.Endianness;
+
+            // Randomize texture IDs if we are modern
+            if ( BinaryFormatUtilities.IsModern( Data.Format ) && Data.TextureSet != null )
+            {
+                var newIDs = new List<int>( Data.TextureSet.Textures.Count );
+
+                var random = new Random();
+                for ( int i = 0; i < Data.TextureSet.Textures.Count; i++ )
+                {
+                    int currentID;
+                    do
+                    {
+                        currentID = random.Next( int.MinValue, int.MaxValue );
+                    } while ( newIDs.Contains( currentID ) );
+
+                    newIDs.Add( currentID );
+                }
+
+                TextureUtilities.ReAssignTextureIDs( Data, newIDs );
+            }
+
+            Textures?.Replace( Data.TextureSet );
 
             base.OnReplace( oldData );
         }

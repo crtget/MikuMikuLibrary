@@ -2,8 +2,8 @@
 // Taken and modified from: https://github.com/TGEnigma/Amicitia //
 //===============================================================//
 
+using MikuMikuLibrary.Maths;
 using MikuMikuLibrary.Misc;
-using MikuMikuLibrary.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +13,7 @@ using System.Text;
 
 namespace MikuMikuLibrary.IO.Common
 {
-    public enum AlignmentKind
+    public enum AlignmentMode
     {
         None,
         Left,
@@ -21,7 +21,7 @@ namespace MikuMikuLibrary.IO.Common
         Right,
     };
 
-    public enum OffsetKind
+    public enum OffsetMode
     {
         Offset,
         Size,
@@ -31,13 +31,13 @@ namespace MikuMikuLibrary.IO.Common
 
     public class EndianBinaryWriter : BinaryWriter
     {
-        private class OffsetWrite
+        private class ScheduledWrite
         {
             public long BaseOffset;
             public long FieldOffset;
-            public Action WriteAction;
-            public OffsetKind OffsetKind;
-            public AlignmentKind AlignmentKind;
+            public Action Action;
+            public OffsetMode OffsetMode;
+            public AlignmentMode AlignmentMode;
             public int Alignment;
             public byte AlignmentFillerByte;
         }
@@ -52,7 +52,7 @@ namespace MikuMikuLibrary.IO.Common
         {
             public long BaseOffset;
             public Dictionary<string, List<long>> Strings;
-            public AlignmentKind AlignmentKind;
+            public AlignmentMode AlignmentMode;
             public int Alignment;
             public StringBinaryFormat Format;
             public int FixedLength;
@@ -63,164 +63,109 @@ namespace MikuMikuLibrary.IO.Common
             }
         }
 
-        private Endianness endianness;
-        private bool swap;
-        private Encoding encoding;
-        private Stack<long> offsetStack;
-        private Stack<long> baseOffsetStack;
-        private Queue<OffsetWrite> offsetWriteQueue;
-        private Queue<DelayedWrite> delayedWriteQueue;
-        private Stack<StringTable> stringTableStack;
-        private List<long> offsetPositions;
+        private Endianness mEndianness;
+        private bool mSwap;
+        private Encoding mEncoding;
+        private Stack<long> mOffsets;
+        private Stack<long> mBaseOffsets;
+        private LinkedList<ScheduledWrite> mScheduledWrites;
+        private Queue<DelayedWrite> mDelayedWriteQueue;
+        private Stack<StringTable> mStringTables;
+        private List<long> mOffsetPositions;
 
         public Endianness Endianness
         {
-            get { return endianness; }
+            get => mEndianness;
             set
             {
-                if ( value != EndiannessSwapUtilities.SystemEndianness )
-                    swap = true;
-                else
-                    swap = false;
-
-                endianness = value;
+                mSwap = value != EndiannessSwapUtilities.SystemEndianness;
+                mEndianness = value;
             }
         }
 
-        public bool EndiannessNeedsSwapping
-        {
-            get { return swap; }
-        }
+        public AddressSpace AddressSpace { get; set; }
+
+        public bool SwapBytes => mSwap;
 
         public long Position
         {
-            get { return BaseStream.Position; }
-            set { BaseStream.Position = value; }
+            get => BaseStream.Position;
+            set => BaseStream.Position = value;
         }
 
-        public long BaseStreamLength
-        {
-            get { return BaseStream.Length; }
-        }
+        public long Length => BaseStream.Length;
 
-        public List<long> OffsetPositions
-        {
-            get { return offsetPositions; }
-        }
+        public IReadOnlyList<long> OffsetPositions => mOffsetPositions;
 
-        public EndianBinaryWriter( Stream input, Endianness endianness )
-            : base( input )
+        public long BaseOffset
         {
-            Init( Encoding.Default, endianness );
-        }
-
-        public EndianBinaryWriter( Stream input, Encoding encoding, Endianness endianness )
-            : base( input, encoding )
-        {
-            Init( encoding, endianness );
-        }
-
-        public EndianBinaryWriter( Stream input, Encoding encoding, bool leaveOpen, Endianness endianness )
-            : base( input, encoding, leaveOpen )
-        {
-            Init( encoding, endianness );
-        }
-
-        private void Init( Encoding encoding, Endianness endianness )
-        {
-            Endianness = endianness;
-            this.encoding = encoding;
-            offsetStack = new Stack<long>();
-            baseOffsetStack = new Stack<long>();
-            offsetWriteQueue = new Queue<OffsetWrite>();
-            delayedWriteQueue = new Queue<DelayedWrite>();
-            stringTableStack = new Stack<StringTable>();
-            offsetPositions = new List<long>();
-        }
-
-        public void Seek( long offset, SeekOrigin origin )
-        {
-            BaseStream.Seek( offset, origin );
-        }
-
-        public void SeekBegin( long offset )
-        {
-            BaseStream.Seek( offset, SeekOrigin.Begin );
-        }
-
-        public void SeekCurrent( long offset )
-        {
-            BaseStream.Seek( offset, SeekOrigin.Current );
-        }
-
-        public void SeekEnd( long offset )
-        {
-            BaseStream.Seek( offset, SeekOrigin.End );
-        }
-
-        public void PushOffset()
-        {
-            offsetStack.Push( Position );
-        }
-
-        public long PeekOffset()
-        {
-            return offsetStack.Peek();
-        }
-
-        public long PopOffset()
-        {
-            return offsetStack.Pop();
-        }
-
-        public void SeekBeginToPoppedOffset()
-        {
-            SeekBegin( PopOffset() );
-        }
-
-        public void PushBaseOffset()
-        {
-            baseOffsetStack.Push( Position );
-        }
-
-        public long PeekBaseOffset()
-        {
-            return baseOffsetStack.Peek();
-        }
-
-        public long PopBaseOffset()
-        {
-            return baseOffsetStack.Pop();
-        }
-
-        public void WriteAlignmentPadding( int alignment, byte filler = 0 )
-        {
-            var difference =
-                AlignmentUtilities.GetAlignedDifference( Position, alignment );
-
-            while ( difference-- > 0 )
-                base.Write( filler );
-        }
-
-        public void WriteNulls( int count )
-        {
-            while ( count-- > 0 )
-                base.Write( ( byte )0 );
-        }
-
-        public void WriteAtOffset( long offset, Action body )
-        {
-            SeekBegin( offset );
-            body.Invoke();
-        }
-
-        public void WriteAndSeekBack( Action body )
-        {
-            long previousOffset = Position;
+            get => mBaseOffsets.Count > 0 ? mBaseOffsets.Peek() : 0;
+            set
             {
-                body.Invoke();
+                if ((mBaseOffsets.Count > 0 && mBaseOffsets.Peek() != value) || mBaseOffsets.Count == 0)
+                    mBaseOffsets.Push(value);
             }
-            SeekBegin( previousOffset );
+        }
+
+        public void Seek(long offset, SeekOrigin origin) => BaseStream.Seek(offset, origin);
+        public void SeekBegin(long offset) => BaseStream.Seek(offset, SeekOrigin.Begin);
+        public void SeekCurrent(long offset) => BaseStream.Seek(offset, SeekOrigin.Current);
+        public void SeekEnd(long offset) => BaseStream.Seek(offset, SeekOrigin.End);
+
+        public void PushOffset(long offset) => mOffsets.Push(offset);
+        public void PushOffset() => mOffsets.Push(Position);
+        public long PeekOffset() => mOffsets.Peek();
+        public long PopOffset() => mOffsets.Pop();
+        public long SeekBeginToPoppedOffset() => BaseStream.Seek(mOffsets.Pop(), SeekOrigin.Begin);
+
+        public void PushBaseOffset(long offset) => mBaseOffsets.Push(offset);
+        public void PushBaseOffset() => mBaseOffsets.Push(Position);
+        public long PeekBaseOffset() => mBaseOffsets.Peek();
+        public long PopBaseOffset() => mBaseOffsets.Pop();
+
+        public void WriteAlignmentPadding(int alignment, byte filler = 0)
+        {
+            int difference = AlignmentUtilities.GetAlignedDifference(Position, alignment);
+
+            int fourByte = (filler << 24 | filler << 16 | filler << 8 | filler);
+
+            for (int i = 0; i < difference / 4; i++)
+                Write(fourByte);
+
+            for (int i = 0; i < difference % 4; i++)
+                Write(filler);
+        }
+
+        public void WriteNulls(int count)
+        {
+            for (int i = 0; i < count / 4; i++)
+                Write((int)0);
+
+            for (int i = 0; i < count % 4; i++)
+                Write((byte)0);
+        }
+
+        public void WriteOffset(long offset)
+        {
+            if (AddressSpace == AddressSpace.Int32)
+                Write((uint)offset);
+
+            if (AddressSpace == AddressSpace.Int64)
+            {
+                WriteAlignmentPadding(8);
+                Write(offset);
+            }
+        }
+
+        public void WriteAtOffset(long offset, Action action)
+        {
+            long current = Position;
+
+            SeekBegin(offset);
+            {
+                action();
+            }
+            SeekBegin(current);
         }
 
         public void WriteAtOffsetAndSeekBack(long offset, Action body)
@@ -234,9 +179,86 @@ namespace MikuMikuLibrary.IO.Common
             SeekBegin(previousOffset);
         }
 
+        public void ScheduleWriteOffset(Action action) =>
+            ScheduleWriteOffset(0, 0, AlignmentMode.None, OffsetMode.Offset, action);
+
+        public void ScheduleWriteOffset(OffsetMode offsetMode, Action action) =>
+            ScheduleWriteOffset(0, 0, AlignmentMode.None, offsetMode, action);
+
+        public void ScheduleWriteOffset(int alignment, AlignmentMode alignmentMode, Action action) =>
+            ScheduleWriteOffset(alignment, 0, alignmentMode, OffsetMode.Offset, action);
+
+        public void ScheduleWriteOffset(int alignment, AlignmentMode alignmentMode, OffsetMode offsetMode, Action action) =>
+            ScheduleWriteOffset(alignment, 0, alignmentMode, offsetMode, action);
+
+        public void ScheduleWriteOffset(int alignment, byte alignmentFillerByte, AlignmentMode alignmentMode, Action action) =>
+            ScheduleWriteOffset(alignment, alignmentFillerByte, alignmentMode, OffsetMode.Offset, action);
+
+        public void ScheduleWriteOffset(int alignment, byte alignmentFillerByte, AlignmentMode alignmentMode, OffsetMode offsetMode, Action action)
+        {
+            mScheduledWrites.AddLast(new ScheduledWrite
+            {
+                FieldOffset = PrepareWriteOffset(offsetMode),
+                Alignment = alignment,
+                AlignmentFillerByte = alignmentFillerByte,
+                AlignmentMode = alignmentMode,
+                OffsetMode = offsetMode,
+                Action = action,
+                BaseOffset = BaseOffset,
+            });
+        }
+
+        public void ScheduleWriteOffsetIf(bool condition, Action action)
+        {
+            if (condition)
+                ScheduleWriteOffset(action);
+            else
+                PrepareWriteOffset(OffsetMode.Offset);
+        }
+
+        public void ScheduleWriteOffsetIf(bool condition, OffsetMode offsetMode, Action action)
+        {
+            if (condition)
+                ScheduleWriteOffset(offsetMode, action);
+            else
+                PrepareWriteOffset(offsetMode);
+        }
+
+        public void ScheduleWriteOffsetIf(bool condition, int alignment, AlignmentMode alignmentMode, Action action)
+        {
+            if (condition)
+                ScheduleWriteOffset(alignment, alignmentMode, action);
+            else
+                PrepareWriteOffset(OffsetMode.Offset);
+        }
+
+        public void ScheduleWriteOffsetIf(bool condition, int alignment, AlignmentMode alignmentMode, OffsetMode offsetMode, Action action)
+        {
+            if (condition)
+                ScheduleWriteOffset(alignment, alignmentMode, offsetMode, action);
+            else
+                PrepareWriteOffset(offsetMode);
+        }
+
+        public void ScheduleWriteOffsetIf(bool condition, int alignment, byte alignmentFillerByte, AlignmentMode alignmentMode, Action action)
+        {
+            if (condition)
+                ScheduleWriteOffset(alignment, alignmentFillerByte, alignmentMode, action);
+            else
+                PrepareWriteOffset(OffsetMode.Offset);
+        }
+
+        public void ScheduleWriteOffsetIf(bool condition, int alignment, byte alignmentFillerByte, AlignmentMode alignmentMode, OffsetMode offsetMode, Action action)
+        {
+            if (condition)
+                ScheduleWriteOffset(alignment, alignmentFillerByte, alignmentMode, offsetMode, action);
+            else
+                PrepareWriteOffset(offsetMode);
+        }
+
         public void EnqueueDelayedWrite(int size, Action body)
         {
-            delayedWriteQueue.Enqueue(new DelayedWrite
+            mDelayedWriteQueue.Enqueue(new DelayedWrite
             {
                 BaseOffset = Position,
                 WriteAction = body,
@@ -245,683 +267,649 @@ namespace MikuMikuLibrary.IO.Common
             PrepareDelayedWrite(size);
         }
 
-        public void EnqueueOffsetWrite( Action body )
-        {
-            EnqueueOffsetWrite( 0, 0, AlignmentKind.None, OffsetKind.Offset, body );
-        }
-
-        public void EnqueueOffsetWrite( OffsetKind offsetKind, Action body )
-        {
-            EnqueueOffsetWrite( 0, 0, AlignmentKind.None, offsetKind, body );
-        }
-
-        public void EnqueueOffsetWrite( int alignment, AlignmentKind alignmentKind, Action body )
-        {
-            EnqueueOffsetWrite( alignment, 0, alignmentKind, OffsetKind.Offset, body );
-        }
-
-        public void EnqueueOffsetWrite( int alignment, AlignmentKind alignmentKind, OffsetKind offsetKind, Action body )
-        {
-            EnqueueOffsetWrite( alignment, 0, alignmentKind, offsetKind, body );
-        }
-
-        public void EnqueueOffsetWrite( int alignment, byte alignmentFillerByte, AlignmentKind alignmentKind, Action body )
-        {
-            EnqueueOffsetWrite( alignment, alignmentFillerByte, alignmentKind, OffsetKind.Offset, body );
-        }
-
-        public void EnqueueOffsetWrite( int alignment, byte alignmentFillerByte, AlignmentKind alignmentKind, OffsetKind offsetKind, Action body )
-        {
-            offsetWriteQueue.Enqueue( new OffsetWrite
-            {
-                FieldOffset = Position,
-                Alignment = alignment,
-                AlignmentFillerByte = alignmentFillerByte,
-                AlignmentKind = alignmentKind,
-                OffsetKind = offsetKind,
-                WriteAction = body,
-                BaseOffset = baseOffsetStack.Any() ? baseOffsetStack.Peek() : 0,
-            } );
-
-            PrepareOffsetWrite( offsetKind );
-        }
-
-        public void EnqueueOffsetWriteIf( bool condition, Action body )
-        {
-            if ( condition )
-                EnqueueOffsetWrite( body );
-            else
-                PrepareOffsetWrite( OffsetKind.Offset );
-        }
-
-        public void EnqueueOffsetWriteIf( bool condition, OffsetKind offsetKind, Action body )
-        {
-            if ( condition )
-                EnqueueOffsetWrite( offsetKind, body );
-            else
-                PrepareOffsetWrite( offsetKind );
-        }
-
-        public void EnqueueOffsetWriteIf( bool condition, int alignment, AlignmentKind alignmentKind, Action body )
-        {
-            if ( condition )
-                EnqueueOffsetWrite( alignment, alignmentKind, body );
-            else
-                PrepareOffsetWrite( OffsetKind.Offset );
-        }
-
-        public void EnqueueOffsetWriteIf( bool condition, int alignment, AlignmentKind alignmentKind, OffsetKind offsetKind, Action body )
-        {
-            if ( condition )
-                EnqueueOffsetWrite( alignment, alignmentKind, offsetKind, body );
-            else
-                PrepareOffsetWrite( offsetKind );
-        }
-
-        public void EnqueueOffsetWriteIf( bool condition, int alignment, byte alignmentFillerByte, AlignmentKind alignmentKind, Action body )
-        {
-            if ( condition )
-                EnqueueOffsetWrite( alignment, alignmentFillerByte, alignmentKind, body );
-            else
-                PrepareOffsetWrite( OffsetKind.Offset );
-        }
-
-        public void EnqueueOffsetWriteIf( bool condition, int alignment, byte alignmentFillerByte, AlignmentKind alignmentKind, OffsetKind offsetKind, Action body )
-        {
-            if ( condition )
-                EnqueueOffsetWrite( alignment, alignmentFillerByte, alignmentKind, offsetKind, body );
-            else
-                PrepareOffsetWrite( offsetKind );
-        }
-
-        private void PrepareOffsetWrite( OffsetKind offsetKind )
-        {
-            switch ( offsetKind )
-            {
-                case OffsetKind.Offset:
-                case OffsetKind.Size:
-                    Write( 0 );
-                    break;
-
-                case OffsetKind.OffsetAndSize:
-                case OffsetKind.SizeAndOffset:
-                    Write( 0L );
-                    break;
-            }
-        }
-
         private void PrepareDelayedWrite(int size)
         {
             WriteNulls(size);
         }
 
-        private void DoOffsetWrite( OffsetWrite offsetWrite, long baseOffset )
+        private long PrepareWriteOffset(OffsetMode offsetMode)
         {
-            offsetWriteQueue = new Queue<OffsetWrite>();
+            long offset;
 
-            if ( offsetWrite.AlignmentKind == AlignmentKind.Left ||
-                offsetWrite.AlignmentKind == AlignmentKind.Center )
+            if (AddressSpace == AddressSpace.Int64)
             {
-                WriteAlignmentPadding( offsetWrite.Alignment, offsetWrite.AlignmentFillerByte );
+                WriteAlignmentPadding(8);
+                offset = Position;
+                Write(0L);
+            }
+            else
+            {
+                offset = Position;
+                Write(0);
             }
 
-            long offset = Position;
-            offsetWrite.WriteAction.Invoke();
+
+            if (offsetMode == OffsetMode.OffsetAndSize || offsetMode == OffsetMode.SizeAndOffset)
+            {
+                if (AddressSpace == AddressSpace.Int64)
+                    Write(0L);
+                else
+                    Write(0);
+            }
+
+            return offset;
+        }
+
+        private void PerformScheduledWrite(LinkedListNode<ScheduledWrite> scheduledWriteNode, long baseOffset)
+        {
+            var scheduledWrite = scheduledWriteNode.Value;
+
+            if (scheduledWrite.AlignmentMode == AlignmentMode.Left || scheduledWrite.AlignmentMode == AlignmentMode.Center)
+                WriteAlignmentPadding(scheduledWrite.Alignment, scheduledWrite.AlignmentFillerByte);
+
+            var first = mScheduledWrites.Last;
+
+            long startOffset = Position;
+            {
+                scheduledWrite.Action();
+            }
             long endOffset = Position;
 
-            if ( offsetWrite.AlignmentKind == AlignmentKind.Right ||
-                offsetWrite.AlignmentKind == AlignmentKind.Center )
+            var last = mScheduledWrites.Last;
+
+            if (scheduledWrite.AlignmentMode == AlignmentMode.Left || scheduledWrite.AlignmentMode == AlignmentMode.Center)
+                WriteAlignmentPadding(scheduledWrite.Alignment, scheduledWrite.AlignmentFillerByte);
+
+            if (scheduledWrite.BaseOffset > 0)
+                baseOffset = scheduledWrite.BaseOffset;
+
+            for (var current = first.Next; current != null && current != last.Next; current = current.Next)
+                PerformScheduledWrite(current, baseOffset);
+
+            mOffsetPositions.Add(scheduledWrite.FieldOffset);
+
+            WriteAtOffset(scheduledWrite.FieldOffset, () =>
             {
-                WriteAlignmentPadding( offsetWrite.Alignment, offsetWrite.AlignmentFillerByte );
-            }
-
-            if ( offsetWrite.BaseOffset != 0 )
-                baseOffset = offsetWrite.BaseOffset;
-
-            long endOffsetAligned = Position;
-            SeekBegin( offsetWrite.FieldOffset );
-            switch ( offsetWrite.OffsetKind )
-            {
-                case OffsetKind.Offset:
-                    Write( ( uint )( offset - baseOffset ) );
-                    break;
-                case OffsetKind.Size:
-                    Write( ( uint )( endOffset - offset ) );
-                    break;
-                case OffsetKind.OffsetAndSize:
-                    Write( ( uint )( offset - baseOffset ) );
-                    Write( ( uint )( endOffset - offset ) );
-                    break;
-                case OffsetKind.SizeAndOffset:
-                    Write( ( uint )( endOffset - offset ) );
-                    Write( ( uint )( offset - baseOffset ) );
-                    break;
-                default:
-                    throw new ArgumentException( nameof( offsetWrite.OffsetKind ) );
-            }
-            SeekBegin( endOffsetAligned );
-
-            // For the relocation table
-            offsetPositions.Add( offsetWrite.FieldOffset );
-
-            var offsetWriteQueueForThisOffsetWrite = offsetWriteQueue;
-            while ( offsetWriteQueueForThisOffsetWrite.Count > 0 )
-                DoOffsetWrite( offsetWriteQueueForThisOffsetWrite.Dequeue(), baseOffset );
+                switch (scheduledWrite.OffsetMode)
+                {
+                    case OffsetMode.Offset:
+                        WriteOffset(startOffset - baseOffset);
+                        break;
+                    case OffsetMode.Size:
+                        WriteOffset(endOffset - startOffset);
+                        break;
+                    case OffsetMode.OffsetAndSize:
+                        WriteOffset(startOffset - baseOffset);
+                        WriteOffset(endOffset - startOffset);
+                        break;
+                    case OffsetMode.SizeAndOffset:
+                        WriteOffset(endOffset - startOffset);
+                        WriteOffset(startOffset - baseOffset);
+                        break;
+                    default:
+                        throw new ArgumentException(nameof(scheduledWrite.OffsetMode));
+                }
+            });
         }
 
-        public void DoEnqueuedOffsetWrites()
+        public void PerformScheduledWrites()
         {
-            var offsetWriteQueue = this.offsetWriteQueue;
+            if (mScheduledWrites.Count == 0)
+                return;
 
-            while ( offsetWriteQueue.Count > 0 )
-                DoOffsetWrite( offsetWriteQueue.Dequeue(), 0 );
+            var first = mScheduledWrites.First;
+            var last = mScheduledWrites.Last;
 
-            this.offsetWriteQueue.Clear();
+            for (var current = first; current != null && current != last.Next; current = current.Next)
+                PerformScheduledWrite(current, 0);
+
+            mScheduledWrites.Clear();
         }
 
-        private void DoDelayedWrite(DelayedWrite delayedWrite)
+        public void PerformScheduledWritesReversed()
+        {
+            mScheduledWrites = new LinkedList<ScheduledWrite>(mScheduledWrites.Reverse());
+            PerformScheduledWrites();
+        }
+
+        private void PerformDelayedWrite(DelayedWrite delayedWrite)
         {
             WriteAtOffset(delayedWrite.BaseOffset, delayedWrite.WriteAction);
         }
 
-        public void DoEnqueuedDelayedWrites()
+        public void PerformDelayedWrites()
         {
-            if (delayedWriteQueue.Count < 1)
+            if (mDelayedWriteQueue.Count < 1)
                 return;
 
-            WriteAndSeekBack(() =>
+            while (mDelayedWriteQueue.Count > 0)
+                PerformDelayedWrite(mDelayedWriteQueue.Dequeue());
+        }
+
+        public void PushStringTable(StringBinaryFormat format, int fixedLength = -1) =>
+            PushStringTable(0, AlignmentMode.None, format, fixedLength);
+
+        public void PushStringTable(int alignment, AlignmentMode alignmentMode, StringBinaryFormat format, int fixedLength = -1)
+        {
+            mStringTables.Push(new StringTable
             {
-                while (delayedWriteQueue.Count > 0)
-                    DoDelayedWrite(delayedWriteQueue.Dequeue());
-            });
-        }
-
-        public void DoEnqueuedOffsetWritesReversed()
-        {
-            offsetWriteQueue = new Queue<OffsetWrite>( offsetWriteQueue.Reverse() );
-            DoEnqueuedOffsetWrites();
-        }
-
-        public void PushStringTable( StringBinaryFormat format, int fixedLength = -1 )
-        {
-            PushStringTable( 0, AlignmentKind.None, format, fixedLength );
-        }
-
-        public void PushStringTable( int alignment, AlignmentKind alignmentKind, StringBinaryFormat format, int fixedLength = -1 )
-        {
-            stringTableStack.Push( new StringTable
-            {
-                BaseOffset = baseOffsetStack.Count > 0 ? baseOffsetStack.Peek() : 0,
+                BaseOffset = BaseOffset,
                 Strings = new Dictionary<string, List<long>>(),
-                AlignmentKind = alignmentKind,
+                AlignmentMode = alignmentMode,
                 Alignment = alignment,
                 Format = format,
                 FixedLength = fixedLength,
-            } );
+            });
+        }
+
+        private void WriteStringTable(StringTable stringTable)
+        {
+            if (stringTable.Strings.Count == 0)
+                return;
+
+            if (stringTable.AlignmentMode == AlignmentMode.Left ||
+                stringTable.AlignmentMode == AlignmentMode.Center)
+            {
+                WriteAlignmentPadding(stringTable.Alignment);
+            }
+
+            foreach (var keyValuePair in stringTable.Strings.OrderBy(x => x.Value[0]))
+            {
+                long stringOffset = Position;
+                Write(keyValuePair.Key, stringTable.Format, stringTable.FixedLength);
+                long endOffset = Position;
+
+                foreach (var offset in keyValuePair.Value)
+                {
+                    SeekBegin(offset);
+                    WriteOffset(stringOffset - stringTable.BaseOffset);
+                    mOffsetPositions.Add(offset);
+                }
+
+                SeekBegin(endOffset);
+            }
+
+            if (stringTable.AlignmentMode == AlignmentMode.Right ||
+                stringTable.AlignmentMode == AlignmentMode.Center)
+            {
+                WriteAlignmentPadding(stringTable.Alignment);
+            }
         }
 
         public void PopStringTable()
         {
-            var stringTable = stringTableStack.Pop();
-
-            if ( stringTable.Strings.Count == 0 )
-                return;
-
-            if ( stringTable.AlignmentKind == AlignmentKind.Left ||
-                stringTable.AlignmentKind == AlignmentKind.Center )
-            {
-                WriteAlignmentPadding( stringTable.Alignment );
-            }
-
-            foreach ( var keyValuePair in stringTable.Strings.OrderBy( x => x.Value[ 0 ] ) )
-            {
-                long stringOffset = Position;
-                Write( keyValuePair.Key, stringTable.Format, stringTable.FixedLength );
-                long endOffset = Position;
-
-                foreach ( var offset in keyValuePair.Value )
-                {
-                    SeekBegin( offset );
-                    Write( ( uint )( stringOffset - stringTable.BaseOffset ) );
-                    offsetPositions.Add( offset );
-                }
-
-                SeekBegin( endOffset );
-            }
-
-            if ( stringTable.AlignmentKind == AlignmentKind.Right ||
-                stringTable.AlignmentKind == AlignmentKind.Center )
-            {
-                WriteAlignmentPadding( stringTable.Alignment );
-            }
+            WriteStringTable(mStringTables.Pop());
         }
 
         public void PopStringTables()
         {
-            while ( stringTableStack.Count > 0 )
+            while (mStringTables.Count > 0)
                 PopStringTable();
         }
 
         public void PopStringTablesReversed()
         {
-            if ( stringTableStack.Count == 0 )
+            if (mStringTables.Count == 0)
                 return;
 
-            else if ( stringTableStack.Count == 1 )
+            else if (mStringTables.Count == 1)
                 PopStringTable();
 
             else
             {
-                var stringTableStack = new Stack<StringTable>( this.stringTableStack.Count );
-                foreach ( var stringTable in this.stringTableStack )
-                    stringTableStack.Push( stringTable );
+                foreach (var stringTable in mStringTables)
+                    WriteStringTable(stringTable);
 
-                this.stringTableStack = stringTableStack;
-                PopStringTables();
+                mStringTables.Clear();
             }
         }
 
-        public void AddStringToStringTable( string value )
+        public void AddStringToStringTable(string value)
         {
-            var stringTable = stringTableStack.Peek();
+            var stringTable = mStringTables.Peek();
 
-            if ( !string.IsNullOrEmpty( value ) )
+            var position = PrepareWriteOffset(OffsetMode.Offset);
+
+            if (!string.IsNullOrEmpty(value))
             {
-                if ( stringTable.Strings.TryGetValue( value, out List<long> positions ) )
-                    positions.Add( Position );
+                if (stringTable.Strings.TryGetValue(value, out List<long> positions))
+                    positions.Add(position);
                 else
                 {
                     var offsets = new List<long>();
-                    offsets.Add( Position );
-                    stringTable.Strings.Add( value, offsets );
+                    offsets.Add(position);
+                    stringTable.Strings.Add(value, offsets);
                 }
             }
-
-            Write( 0 );
         }
 
-        public void Write( sbyte[] values )
+        public void Write(sbyte[] values)
         {
-            for ( int i = 0; i < values.Length; i++ )
-                base.Write( values[ i ] );
+            for (int i = 0; i < values.Length; i++)
+                base.Write(values[i]);
         }
 
-        public void Write( bool[] values )
+        public void Write(bool[] values)
         {
-            for ( int i = 0; i < values.Length; i++ )
-                Write( values[ i ] );
+            for (int i = 0; i < values.Length; i++)
+                Write(values[i]);
         }
 
-        public override void Write( short value )
+        public override void Write(short value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value ) : value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value) : value);
         }
 
-        public void Write( short[] values )
+        public void Write(short[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public override void Write( ushort value )
+        public override void Write(ushort value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value ) : value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value) : value);
         }
 
-        public void Write( ushort[] values )
+        public void Write(ushort[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public override void Write( int value )
+        public override void Write(int value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value ) : value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value) : value);
         }
 
-        public void Write( int[] values )
+        public void Write(int[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public override void Write( uint value )
+        public override void Write(uint value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value ) : value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value) : value);
         }
 
-        public void Write( uint[] values )
+        public void Write(uint[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public override void Write( long value )
+        public override void Write(long value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value ) : value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value) : value);
         }
 
-        public void Write( long[] values )
+        public void Write(long[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public override void Write( ulong value )
+        public override void Write(ulong value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value ) : value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value) : value);
         }
 
-        public void Write( ulong[] values )
+        public void Write(ulong[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public override void Write( float value )
+        public override void Write(float value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value ) : value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value) : value);
         }
 
-        public void Write( float[] values )
+        public void Write(float[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public void Write( Half value )
+        public void Write(Half value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value.Value ) : value.Value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value.Value) : value.Value);
         }
 
-        public void Write( Half[] values )
+        public void Write(Half[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public override void Write( decimal value )
+        public override void Write(decimal value)
         {
-            base.Write( swap ? EndiannessSwapUtilities.Swap( value ) : value );
+            base.Write(mSwap ? EndiannessSwapUtilities.Swap(value) : value);
         }
 
-        public void Write( decimal[] values )
+        public void Write(decimal[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public void Write( string value, StringBinaryFormat format, int fixedLength = -1 )
+        public void Write(string value, StringBinaryFormat format, int fixedLength = -1)
         {
-            switch ( format )
+            switch (format)
             {
                 case StringBinaryFormat.NullTerminated:
                     {
-                        Write( encoding.GetBytes( value ) );
-                        base.Write( ( byte )0 );
+                        Write(mEncoding.GetBytes(value));
+                        base.Write((byte)0);
                     }
                     break;
                 case StringBinaryFormat.FixedLength:
                     {
-                        if ( fixedLength == -1 )
-                        {
-                            throw new ArgumentException( "Fixed length must be provided if format is set to fixed length", nameof( fixedLength ) );
-                        }
+                        if (fixedLength == -1)
+                            throw new ArgumentException("Fixed length must be provided if format is set to fixed length", nameof(fixedLength));
 
-                        var bytes = encoding.GetBytes( value );
-                        if ( bytes.Length > fixedLength )
-                        {
-                            throw new ArgumentException( "Provided string is longer than fixed length", nameof( value ) );
-                        }
+                        var bytes = mEncoding.GetBytes(value);
+                        if (bytes.Length > fixedLength)
+                            throw new ArgumentException("Provided string is longer than fixed length", nameof(value));
 
-                        Write( bytes );
+                        Write(bytes);
                         fixedLength -= bytes.Length;
 
-                        while ( fixedLength-- > 0 )
-                            base.Write( ( byte )0 );
+                        while (fixedLength-- > 0)
+                            base.Write((byte)0);
                     }
                     break;
 
                 case StringBinaryFormat.PrefixedLength8:
                     {
-                        base.Write( ( byte )value.Length );
-                        Write( encoding.GetBytes( value ) );
+                        base.Write((byte)value.Length);
+                        Write(mEncoding.GetBytes(value));
                     }
                     break;
 
                 case StringBinaryFormat.PrefixedLength16:
                     {
-                        Write( ( ushort )value.Length );
-                        Write( encoding.GetBytes( value ) );
+                        Write((ushort)value.Length);
+                        Write(mEncoding.GetBytes(value));
                     }
                     break;
 
                 case StringBinaryFormat.PrefixedLength32:
                     {
-                        Write( ( uint )value.Length );
-                        Write( encoding.GetBytes( value ) );
+                        Write((uint)value.Length);
+                        Write(mEncoding.GetBytes(value));
                     }
                     break;
 
                 default:
-                    throw new ArgumentException( "Invalid format specified", nameof( format ) );
+                    throw new ArgumentException("Invalid format specified", nameof(format));
             }
         }
 
-        public void Write( Vector2 value )
+        public void Write(Vector2 value)
         {
-            Write( value.X );
-            Write( value.Y );
+            Write(value.X);
+            Write(value.Y);
         }
 
-        public void Write( Vector2 value, VectorBinaryFormat format )
+        public void Write(Vector2 value, VectorBinaryFormat format)
         {
-            switch ( format )
+            switch (format)
             {
                 case VectorBinaryFormat.Single:
-                    Write( value.X );
-                    Write( value.Y );
+                    Write(value.X);
+                    Write(value.Y);
                     break;
 
                 case VectorBinaryFormat.Half:
-                    Write( ( Half )value.X );
-                    Write( ( Half )value.Y );
+                    Write((Half)value.X);
+                    Write((Half)value.Y);
                     break;
 
                 case VectorBinaryFormat.Int16:
-                    Write( ( short )( value.X * 32768f ) );
-                    Write( ( short )( value.Y * 32768f ) );
+                    Write((short)(value.X * 32768f));
+                    Write((short)(value.Y * 32768f));
                     break;
 
                 default:
-                    throw new ArgumentException( nameof( format ) );
+                    throw new ArgumentException(nameof(format));
             }
         }
 
-        public void Write( Vector2[] values )
+        public void Write(Vector2[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public void Write( Vector3 value )
+        public void Write(Vector3 value)
         {
-            Write( value.X );
-            Write( value.Y );
-            Write( value.Z );
+            Write(value.X);
+            Write(value.Y);
+            Write(value.Z);
         }
 
-        public void Write( Vector3 value, VectorBinaryFormat format )
+        public void Write(Vector3 value, VectorBinaryFormat format)
         {
-            switch ( format )
+            switch (format)
             {
                 case VectorBinaryFormat.Single:
-                    Write( value.X );
-                    Write( value.Y );
-                    Write( value.Z );
+                    Write(value.X);
+                    Write(value.Y);
+                    Write(value.Z);
                     break;
 
                 case VectorBinaryFormat.Half:
-                    Write( ( Half )value.X );
-                    Write( ( Half )value.Y );
-                    Write( ( Half )value.Z );
+                    Write((Half)value.X);
+                    Write((Half)value.Y);
+                    Write((Half)value.Z);
                     break;
 
                 case VectorBinaryFormat.Int16:
-                    Write( ( short )( value.X * 32768f ) );
-                    Write( ( short )( value.Y * 32768f ) );
-                    Write( ( short )( value.Z * 32768f ) );
+                    Write((short)(value.X * 32768f));
+                    Write((short)(value.Y * 32768f));
+                    Write((short)(value.Z * 32768f));
                     break;
 
                 default:
-                    throw new ArgumentException( nameof( format ) );
+                    throw new ArgumentException(nameof(format));
             }
         }
 
-        public void Write( Vector3[] values )
+        public void Write(Vector3[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public void Write( Vector4 value )
+        public void Write(Vector4 value)
         {
-            Write( value.X );
-            Write( value.Y );
-            Write( value.Z );
-            Write( value.W );
+            Write(value.X);
+            Write(value.Y);
+            Write(value.Z);
+            Write(value.W);
         }
 
-        public void Write( Vector4 value, VectorBinaryFormat format )
+        public void Write(Vector4 value, VectorBinaryFormat format)
         {
-            switch ( format )
+            switch (format)
             {
                 case VectorBinaryFormat.Single:
-                    Write( value.X );
-                    Write( value.Y );
-                    Write( value.Z );
-                    Write( value.W );
+                    Write(value.X);
+                    Write(value.Y);
+                    Write(value.Z);
+                    Write(value.W);
                     break;
 
                 case VectorBinaryFormat.Half:
-                    Write( ( Half )value.X );
-                    Write( ( Half )value.Y );
-                    Write( ( Half )value.Z );
-                    Write( ( Half )value.W );
+                    Write((Half)value.X);
+                    Write((Half)value.Y);
+                    Write((Half)value.Z);
+                    Write((Half)value.W);
                     break;
 
                 case VectorBinaryFormat.Int16:
-                    Write( ( short )( value.X * 32768f ) );
-                    Write( ( short )( value.Y * 32768f ) );
-                    Write( ( short )( value.Z * 32768f ) );
-                    Write( ( short )( value.W * 32768f ) );
+                    Write((short)(value.X * 32768f));
+                    Write((short)(value.Y * 32768f));
+                    Write((short)(value.Z * 32768f));
+                    Write((short)(value.W * 32768f));
                     break;
 
                 default:
-                    throw new ArgumentException( nameof( format ) );
+                    throw new ArgumentException(nameof(format));
             }
         }
 
-        public void Write( Vector4[] values )
+        public void Write(Vector4[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public void Write( Matrix4x4 value )
+        public void Write(Matrix4x4 value)
         {
-            Write( value.M11 );
-            Write( value.M12 );
-            Write( value.M13 );
-            Write( value.M14 );
-            Write( value.M21 );
-            Write( value.M22 );
-            Write( value.M23 );
-            Write( value.M24 );
-            Write( value.M31 );
-            Write( value.M32 );
-            Write( value.M33 );
-            Write( value.M34 );
-            Write( value.M41 );
-            Write( value.M42 );
-            Write( value.M43 );
-            Write( value.M44 );
+            Write(value.M11);
+            Write(value.M12);
+            Write(value.M13);
+            Write(value.M14);
+            Write(value.M21);
+            Write(value.M22);
+            Write(value.M23);
+            Write(value.M24);
+            Write(value.M31);
+            Write(value.M32);
+            Write(value.M33);
+            Write(value.M34);
+            Write(value.M41);
+            Write(value.M42);
+            Write(value.M43);
+            Write(value.M44);
         }
 
-        public void Write( Matrix4x4[] values )
+        public void Write(Matrix4x4[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public void Write( Color value )
+        public void Write(Color value)
         {
-            Write( value.R );
-            Write( value.G );
-            Write( value.B );
-            Write( value.A );
+            Write(value.R);
+            Write(value.G);
+            Write(value.B);
+            Write(value.A);
         }
 
-        public void Write( Color value, VectorBinaryFormat format )
+        public void Write(Color value, VectorBinaryFormat format)
         {
-            switch ( format )
+            switch (format)
             {
                 case VectorBinaryFormat.Single:
-                    Write( value.R );
-                    Write( value.G );
-                    Write( value.B );
-                    Write( value.A );
+                    Write(value.R);
+                    Write(value.G);
+                    Write(value.B);
+                    Write(value.A);
                     break;
 
                 case VectorBinaryFormat.Half:
-                    Write( ( Half )value.R );
-                    Write( ( Half )value.G );
-                    Write( ( Half )value.B );
-                    Write( ( Half )value.A );
+                    Write((Half)value.R);
+                    Write((Half)value.G);
+                    Write((Half)value.B);
+                    Write((Half)value.A);
                     break;
 
                 case VectorBinaryFormat.Int16:
-                    Write( ( short )( value.R * 32768f ) );
-                    Write( ( short )( value.G * 32768f ) );
-                    Write( ( short )( value.B * 32768f ) );
-                    Write( ( short )( value.A * 32768f ) );
+                    Write((short)(value.R * 32768f));
+                    Write((short)(value.G * 32768f));
+                    Write((short)(value.B * 32768f));
+                    Write((short)(value.A * 32768f));
                     break;
 
                 default:
-                    throw new ArgumentException( nameof( format ) );
+                    throw new ArgumentException(nameof(format));
             }
         }
 
-        public void Write( Color[] values )
+        public void Write(Color[] values)
         {
-            foreach ( var value in values )
-                Write( value );
+            foreach (var value in values)
+                Write(value);
         }
 
-        public void Write( BoundingSphere boundingSphere )
+        public void Write(BoundingSphere boundingSphere)
         {
-            Write( boundingSphere.Center );
-            Write( boundingSphere.Radius );
+            Write(boundingSphere.Center);
+            Write(boundingSphere.Radius);
         }
 
-        public void Write( BoundingBox boundingBox )
+        public void Write(BoundingBox boundingBox)
         {
-            Write( boundingBox.Center );
-            Write( boundingBox.Width );
-            Write( boundingBox.Height );
-            Write( boundingBox.Depth );
+            Write(boundingBox.Center);
+            Write(boundingBox.Width);
+            Write(boundingBox.Height);
+            Write(boundingBox.Depth);
         }
 
-        protected override void Dispose( bool disposing )
+        protected override void Dispose(bool disposing)
         {
-            if ( disposing )
+            if (disposing)
             {
-                DoEnqueuedOffsetWrites();
-                DoEnqueuedDelayedWrites();
+                PerformScheduledWrites();
+                PerformDelayedWrites();
                 PopStringTablesReversed();
             }
 
-            base.Dispose( disposing );
+            base.Dispose(disposing);
+        }
+
+        public EndianBinaryWriter(Stream input, Endianness endianness)
+            : base(input)
+        {
+            Init(Encoding.Default, endianness, AddressSpace.Int32);
+        }
+
+        public EndianBinaryWriter(Stream input, Endianness endianness, AddressSpace addressSpace)
+            : base(input)
+        {
+            Init(Encoding.Default, endianness, addressSpace);
+        }
+
+        public EndianBinaryWriter(Stream input, Encoding encoding, Endianness endianness)
+            : base(input, encoding)
+        {
+            Init(encoding, endianness, AddressSpace.Int32);
+        }
+
+        public EndianBinaryWriter(Stream input, Encoding encoding, Endianness endianness, AddressSpace addressSpace)
+            : base(input, encoding)
+        {
+            Init(encoding, endianness, addressSpace);
+        }
+
+        public EndianBinaryWriter(Stream input, Encoding encoding, bool leaveOpen, Endianness endianness)
+            : base(input, encoding, leaveOpen)
+        {
+            Init(encoding, endianness, AddressSpace.Int32);
+        }
+
+        public EndianBinaryWriter(Stream input, Encoding encoding, bool leaveOpen, Endianness endianness, AddressSpace addressSpace)
+            : base(input, encoding, leaveOpen)
+        {
+            Init(encoding, endianness, addressSpace);
+        }
+
+        private void Init(Encoding encoding, Endianness endianness, AddressSpace addressSpace)
+        {
+            Endianness = endianness;
+            AddressSpace = addressSpace;
+            mEncoding = encoding;
+            mOffsets = new Stack<long>();
+            mBaseOffsets = new Stack<long>();
+            mScheduledWrites = new LinkedList<ScheduledWrite>();
+            mDelayedWriteQueue = new Queue<DelayedWrite>();
+            mStringTables = new Stack<StringTable>();
+            mOffsetPositions = new List<long>();
         }
     }
 }

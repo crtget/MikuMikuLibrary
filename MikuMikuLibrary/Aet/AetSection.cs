@@ -62,7 +62,7 @@ namespace MikuMikuLibrary.Aet
 
             reader.ReadAtOffsetAndSeekBack(ThisOffset, () =>
             {
-                Name = reader.ReadStringPtr(StringBinaryFormat.NullTerminated);
+                Name = reader.ReadStringOffset(StringBinaryFormat.NullTerminated);
 
                 reader.ReadSingle(); // unknown
 
@@ -222,7 +222,7 @@ namespace MikuMikuLibrary.Aet
             // metadata
             writer.WriteAtOffsetAndSeekBack(GetSectionPointerAddress(), () =>
             {
-                writer.EnqueueOffsetWrite(() =>
+                writer.ScheduleWriteOffset(() =>
                 {
                     writer.AddStringToStringTable(Name);
 
@@ -238,7 +238,7 @@ namespace MikuMikuLibrary.Aet
 
                     // aet object pointer table
                     writer.Write(AetObjPairPointerTable.Count);
-                    writer.EnqueueOffsetWrite(() =>
+                    writer.ScheduleWriteOffset(() =>
                     {
                         foreach (var aetObjPtr in AetObjPairPointerTable)
                             aetObjPtr.Write(writer, this);

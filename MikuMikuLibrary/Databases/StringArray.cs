@@ -7,20 +7,17 @@ namespace MikuMikuLibrary.Databases
 {
     public class StringArray : BinaryFile
     {
-        public override BinaryFileFlags Flags
-        {
-            get { return BinaryFileFlags.Load | BinaryFileFlags.Save; }
-        }
+        public override BinaryFileFlags Flags => BinaryFileFlags.Load | BinaryFileFlags.Save;
 
         public List<string> Strings { get; }
 
-        public override void Read( EndianBinaryReader reader, Section section = null )
+        public override void Read( EndianBinaryReader reader, ISection section = null )
         {
             var offsets = new List<long>();
 
             // Try to determine endianness (apparently DT uses big endian string arrays)
             uint stringOffset = reader.ReadUInt32();
-            if ( stringOffset >= reader.BaseStreamLength )
+            if ( stringOffset >= reader.Length )
             {
                 reader.Endianness = Endianness.BigEndian;
                 stringOffset = EndiannessSwapUtilities.Swap( stringOffset );
@@ -41,7 +38,7 @@ namespace MikuMikuLibrary.Databases
             }
         }
 
-        public override void Write( EndianBinaryWriter writer, Section section = null )
+        public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             foreach ( var str in Strings )
                 writer.AddStringToStringTable( str );

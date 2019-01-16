@@ -6,15 +6,8 @@ namespace MikuMikuModel.DataNodes
     [DataNodeSpecialName( "Mesh Skin" )]
     public class MeshSkinNode : DataNode<MeshSkin>
     {
-        public override DataNodeFlags Flags
-        {
-            get { return DataNodeFlags.Branch; }
-        }
-
-        public override DataNodeActionFlags ActionFlags
-        {
-            get { return DataNodeActionFlags.None; }
-        }
+        public override DataNodeFlags Flags => DataNodeFlags.Branch;
+        public override DataNodeActionFlags ActionFlags => DataNodeActionFlags.None;
 
         [Browsable( false )]
         public ListNode<Bone> Bones { get; set; }
@@ -38,7 +31,7 @@ namespace MikuMikuModel.DataNodes
             Add( Bones = new ListNode<Bone>( nameof( Data.Bones ), Data.Bones ) );
 
             if ( Data.ExData != null )
-                Add( ExData = new MeshExDataNode( "ExData", Data.ExData ) );
+                Add( ExData = new MeshExDataNode( "Ex data", Data.ExData ) );
         }
 
         public MeshSkinNode( string name, MeshSkin data ) : base( name, data )

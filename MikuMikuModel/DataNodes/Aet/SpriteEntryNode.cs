@@ -18,6 +18,7 @@ namespace MikuMikuModel.DataNodes.Aet
         {
             get
             {
+#if false
                 if (Data.Name != null)
                 {
                     var parentAet = Parent.Parent.Parent.Data as AetSet;
@@ -31,6 +32,7 @@ namespace MikuMikuModel.DataNodes.Aet
                         return TextureViewControl.Instance;
                     }
                 }
+#endif
 
                 return base.Control;
             }

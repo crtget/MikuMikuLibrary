@@ -13,10 +13,8 @@ namespace MikuMikuLibrary.Models
 {
     public class Model : BinaryFile
     {
-        public override BinaryFileFlags Flags
-        {
-            get { return BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionFormat; }
-        }
+        public override BinaryFileFlags Flags =>
+            BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionedVersion;
 
         public override Endianness Endianness
         {
@@ -39,12 +37,9 @@ namespace MikuMikuLibrary.Models
         public List<int> TextureIDs { get; }
         public TextureSet TextureSet { get; set; }
 
-        public int BoneCount
-        {
-            get { return Meshes.Count != 0 ? 0x39393939 : -1; }
-        }
+        public int BoneCount => Meshes.Count != 0 ? 0x39393939 : -1;
 
-        public override void Read( EndianBinaryReader reader, Section section = null )
+        public override void Read( EndianBinaryReader reader, ISection section = null )
         {
             uint signature = reader.ReadUInt32();
             if ( signature != 0x5062500 && signature != 0x5062501 )
@@ -68,7 +63,7 @@ namespace MikuMikuLibrary.Models
                 Meshes.Capacity = meshCount;
                 for ( int i = 0; i < meshCount; i++ )
                 {
-                    reader.ReadAtOffsetAndSeekBack( reader.ReadUInt32(), () =>
+                    reader.ReadOffset( () =>
                     {
                         reader.PushBaseOffset();
                         {
@@ -85,7 +80,7 @@ namespace MikuMikuLibrary.Models
             {
                 foreach ( var mesh in Meshes )
                 {
-                    reader.ReadAtOffsetAndSeekBackIfNotZero( reader.ReadUInt32(), () =>
+                    reader.ReadOffset( () =>
                     {
                         mesh.Skin = new MeshSkin();
                         mesh.Skin.Read( reader );
@@ -96,7 +91,7 @@ namespace MikuMikuLibrary.Models
             reader.ReadAtOffset( meshNamesOffset, () =>
             {
                 foreach ( var mesh in Meshes )
-                    mesh.Name = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+                    mesh.Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             } );
 
             reader.ReadAtOffset( meshIDsOffset, () =>
@@ -113,7 +108,7 @@ namespace MikuMikuLibrary.Models
             } );
         }
 
-        public override void Write( EndianBinaryWriter writer, Section section = null )
+        public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             writer.Write( section != null ? 0x5062501 : 0x5062500 );
             writer.Write( Meshes.Count );
@@ -123,11 +118,11 @@ namespace MikuMikuLibrary.Models
             // Section writers will already write the meshes,
             // so we only write for the classic formats in this method.
 
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Center, () =>
             {
                 foreach ( var mesh in Meshes )
                 {
-                    writer.EnqueueOffsetWriteIf( section == null, 4, AlignmentKind.Center, () =>
+                    writer.ScheduleWriteOffsetIf( section == null, 4, AlignmentMode.Center, () =>
                     {
                         writer.PushBaseOffset();
                         mesh.Write( writer );
@@ -135,27 +130,27 @@ namespace MikuMikuLibrary.Models
                     } );
                 }
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Center, () =>
             {
                 foreach ( var mesh in Meshes )
                 {
-                    writer.EnqueueOffsetWriteIf( mesh.Skin != null && section == null, 16, AlignmentKind.Left, () =>
+                    writer.ScheduleWriteOffsetIf( mesh.Skin != null && section == null, 16, AlignmentMode.Left, () =>
                     {
                         mesh.Skin.Write( writer );
                     } );
                 }
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Center, () =>
             {
                 foreach ( var mesh in Meshes )
-                    writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () => writer.Write( mesh.Name, StringBinaryFormat.NullTerminated ) );
+                    writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () => writer.Write( mesh.Name, StringBinaryFormat.NullTerminated ) );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Center, () =>
             {
                 foreach ( var mesh in Meshes )
                     writer.Write( mesh.ID );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Center, () =>
             {
                 foreach ( var textureID in TextureIDs )
                     writer.Write( textureID );
@@ -244,7 +239,7 @@ namespace MikuMikuLibrary.Models
                                 index = skeleton.BoneNames1.FindIndex( x => x.Equals( bone.Name, StringComparison.OrdinalIgnoreCase ) );
                             else
                                 index = 0x8000 | index;
-  
+
                             if ( index != -1 )
                             {
                                 // Before we do this, fix the child bones
@@ -285,9 +280,7 @@ namespace MikuMikuLibrary.Models
                 }
 
                 if ( !newIDs.SequenceEqual( TextureIDs ) )
-                {
-                    Texture.ReAssignTextureIDs( this, newIDs );
-                }
+                    TextureUtilities.ReAssignTextureIDs( this, newIDs );
             }
 
             Save( destination, leaveOpen );

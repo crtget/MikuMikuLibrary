@@ -2,220 +2,264 @@
 using MikuMikuLibrary.IO.Sections;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace MikuMikuLibrary.IO
 {
     public abstract class BinaryFile : IBinaryFile
     {
-        internal static readonly Encoding Encoding = Encoding.GetEncoding("shift-jis"); // Encoding.UTF8;
+        internal static readonly Encoding sEncoding = Encoding.GetEncoding("shift-jis");
 
-        protected Stream stream;
-        protected bool ownsStream;
+        protected Stream mStream;
+        protected bool mOwnsStream;
 
         public abstract BinaryFileFlags Flags { get; }
         public virtual BinaryFormat Format { get; set; }
         public virtual Endianness Endianness { get; set; }
 
-        public static T Load<T>( Stream source, bool leaveOpen = false ) where T : IBinaryFile
+        public static T Load<T>(Stream source, bool leaveOpen = false) where T : IBinaryFile, new()
         {
-            var instance = Activator.CreateInstance<T>();
-            instance.Load( source, leaveOpen );
+            var instance = new T();
+            instance.Load(source, leaveOpen);
             return instance;
         }
 
-        public static T Load<T>( string filePath ) where T : IBinaryFile
+        public static T Load<T>(string filePath) where T : IBinaryFile, new()
         {
-            var instance = Activator.CreateInstance<T>();
-            instance.Load( filePath );
+            var instance = new T();
+            instance.Load(filePath);
             return instance;
         }
 
-        public static T LoadIfExist<T>( string filePath ) where T : IBinaryFile
+        public static T LoadIfExist<T>(string filePath) where T : IBinaryFile, new()
         {
-            var instance = Activator.CreateInstance<T>();
+            var instance = new T();
 
-            if ( string.IsNullOrEmpty( filePath ) || !File.Exists( filePath ) )
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
                 return instance;
 
-            instance.Load( filePath );
+            instance.Load(filePath);
             return instance;
         }
 
-        public void Load( Stream source, bool leaveOpen = false )
+        public void Load(Stream source, bool leaveOpen = false)
         {
-            if ( !Flags.HasFlag( BinaryFileFlags.Load ) )
-                throw new NotSupportedException( "Binary file is not able to load" );
+            if (!Flags.HasFlag(BinaryFileFlags.Load))
+                throw new NotSupportedException("Binary file is not able to load");
 
-            if ( Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) )
+            if (Flags.HasFlag(BinaryFileFlags.UsesSourceStream))
             {
-                stream = source;
-                ownsStream = !leaveOpen;
+                mStream = source;
+                mOwnsStream = !leaveOpen;
             }
 
-            // Attempt to detect the section format and read with that
-            if ( Flags.HasFlag( BinaryFileFlags.HasSectionFormat ) )
-            {
-                if ( SectionManager.SingleSectionInfosByDataType.TryGetValue( GetType(), out SectionInfo sectionInfo ) )
-                {
-                    long position = source.Position;
-                    var signatureBytes = new byte[ 4 ];
-                    source.Read( signatureBytes, 0, signatureBytes.Length );
-                    source.Seek( position, SeekOrigin.Begin );
+            if (!(Flags.HasFlag(BinaryFileFlags.HasSectionedVersion) && ReadModern()))
+                ReadClassic();
 
-                    if ( Encoding.ASCII.GetString( signatureBytes ) == sectionInfo.Signature )
+            if (!leaveOpen && !Flags.HasFlag(BinaryFileFlags.UsesSourceStream))
+                source.Dispose();
+
+            bool ReadModern()
+            {
+                var bytes = new byte[4];
+                string ReadSignature()
+                {
+                    source.Read(bytes, 0, bytes.Length);
+                    return Encoding.UTF8.GetString(bytes);
+                }
+
+                long current = source.Position;
+                {
+                    var signature = ReadSignature();
+
+                    if (SectionRegistry.SectionInfosBySignature.TryGetValue(signature, out SectionInfo sectionInfo))
                     {
-                        Format = sectionInfo.Create( source, this ).Format;
-                        return;
+                        using (var section = sectionInfo.Create(SectionMode.Read, this))
+                        {
+                            section.Read(source, true);
+
+                            while (source.Position < source.Length)
+                            {
+                                signature = ReadSignature();
+                                sectionInfo = SectionRegistry.SectionInfosBySignature[signature];
+
+                                using (var siblingSection = sectionInfo.Create(SectionMode.Read))
+                                {
+                                    if (siblingSection is EndOfFileSection)
+                                        break;
+                                    else if (section.SectionInfo.SubSectionInfos.TryGetValue(sectionInfo, out var subSectionInfo))
+                                        subSectionInfo.ProcessPropertyForReading(siblingSection, section);
+                                }
+                            }
+                        }
+
+                        return true;
+                    }
+                }
+
+                source.Seek(current, SeekOrigin.Begin);
+                return false;
+            }
+
+            void ReadClassic()
+            {
+                using (var reader = new EndianBinaryReader(source, Encoding.UTF8, true, Endianness))
+                {
+                    reader.PushBaseOffset();
+                    {
+                        Read(reader);
                     }
                 }
             }
-
-            // Or try to read in the old fashioned way
-            using ( var reader = new EndianBinaryReader( source, Encoding, true, Endianness ) )
-            {
-                reader.PushBaseOffset();
-                {
-                    Read( reader );
-                }
-                reader.PopBaseOffset();
-            }
-
-            if ( !leaveOpen && !Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) )
-                source.Dispose();
         }
 
-        public virtual void Load( string filePath )
+        public virtual void Load(string filePath)
         {
-            if ( !Flags.HasFlag( BinaryFileFlags.Load ) )
-                throw new NotSupportedException( "Binary file is not able to load" );
+            if (!Flags.HasFlag(BinaryFileFlags.Load))
+                throw new NotSupportedException("Binary file is not able to load");
 
-            Load( File.OpenRead( filePath ), false );
+            Load(File.OpenRead(filePath), false);
         }
 
-        public void LoadIfExist( string filePath )
+        public void LoadIfExist(string filePath)
         {
-            if ( !Flags.HasFlag( BinaryFileFlags.Load ) )
-                throw new NotSupportedException( "Binary file is not able to load" );
+            if (!Flags.HasFlag(BinaryFileFlags.Load))
+                throw new NotSupportedException("Binary file is not able to load");
 
-            if ( string.IsNullOrEmpty( filePath ) || !File.Exists( filePath ) )
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
                 return;
 
-            Load( filePath );
+            Load(filePath);
         }
 
-        public void Save( Stream destination, bool leaveOpen = false )
+        public void Save(Stream destination, bool leaveOpen = false)
         {
-            if ( !Flags.HasFlag( BinaryFileFlags.Save ) )
-                throw new NotSupportedException( "Binary file is not able to save" );
+            if (!Flags.HasFlag(BinaryFileFlags.Save))
+                throw new NotSupportedException("Binary file is not able to save");
 
-            // See if we are supposed to write in sectioned format
-            if ( Flags.HasFlag( BinaryFileFlags.HasSectionFormat ) && BinaryFormatUtilities.IsModern( Format ) )
-            {
-                if ( SectionManager.SingleSectionInfosByDataType.TryGetValue( GetType(), out SectionInfo sectionInfo ) )
-                {
-                    sectionInfo.Create( this, Endianness ).Write( destination );
-                    return;
-                }
-            }
+            if (Flags.HasFlag(BinaryFileFlags.HasSectionedVersion) && BinaryFormatUtilities.IsModern(Format))
+                WriteModern();
 
-            // Or try to write in the old fashioned way
-            using ( var writer = new EndianBinaryWriter( destination, Encoding, true, Endianness ) )
-            {
-                writer.PushBaseOffset();
-                {
-                    // Push a string table
-                    writer.PushStringTable( 16, AlignmentKind.Center, StringBinaryFormat.NullTerminated );
-
-                    Write( writer );
-
-                    // Do the enqueued offset writes & string tables
-                    writer.DoEnqueuedOffsetWrites();
-                    writer.PopStringTablesReversed();
-                }
-                writer.PopBaseOffset();
-            }
+            else
+                WriteClassic();
 
             // Adopt this stream
-            if ( Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) )
+            if (Flags.HasFlag(BinaryFileFlags.UsesSourceStream))
             {
-                if ( ownsStream )
-                    stream.Dispose();
+                if (mOwnsStream)
+                    mStream.Dispose();
 
-                stream = destination;
-                ownsStream = !leaveOpen;
+                mStream = destination;
+                mOwnsStream = !leaveOpen;
 
-                stream.Flush();
+                mStream.Flush();
             }
-            else if ( !leaveOpen )
+            else if (!leaveOpen)
             {
                 destination.Close();
             }
+
+            void WriteModern()
+            {
+                using (var section = GetSectionInstanceForWriting())
+                {
+                    section.Write(destination);
+
+                    foreach (var subSection in section.Sections.Where(x => x.SectionInfo.IsBinaryFileType))
+                        subSection.Write(destination);
+
+                    using (var eofSection = new EndOfFileSection(SectionMode.Write, this))
+                        eofSection.Write(destination);
+                }
+            }
+
+            void WriteClassic()
+            {
+                using (var writer = new EndianBinaryWriter(destination, sEncoding, true, Endianness))
+                {
+                    writer.PushBaseOffset();
+                    {
+                        // Push a string table
+                        writer.PushStringTable(16, AlignmentMode.Center, StringBinaryFormat.NullTerminated);
+                        {
+                            Write(writer);
+                        }
+                        writer.PerformScheduledWrites();
+                        writer.PopStringTablesReversed();
+                    }
+                }
+            }
         }
 
-        public virtual void Save( string filePath )
+        public virtual void Save(string filePath)
         {
-            if ( !Flags.HasFlag( BinaryFileFlags.Save ) )
-                throw new NotSupportedException( "Binary file is not able to save" );
+            if (!Flags.HasFlag(BinaryFileFlags.Save))
+                throw new NotSupportedException("Binary file is not able to save");
 
             // Prevent any kind of conflict.
-            if ( Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) && stream is FileStream fileStream )
+            if (Flags.HasFlag(BinaryFileFlags.UsesSourceStream) && mStream is FileStream fileStream)
             {
-                filePath = Path.GetFullPath( filePath );
-                string thisFilePath = Path.GetFullPath( fileStream.Name );
+                filePath = Path.GetFullPath(filePath);
+                string thisFilePath = Path.GetFullPath(fileStream.Name);
 
-                if ( filePath.Equals( thisFilePath, StringComparison.OrdinalIgnoreCase ) )
+                if (filePath.Equals(thisFilePath, StringComparison.OrdinalIgnoreCase))
                 {
                     do
                     {
                         thisFilePath += "_";
-                    } while ( File.Exists( thisFilePath ) );
+                    } while (File.Exists(thisFilePath));
 
-                    using ( var destination = File.Create( thisFilePath ) )
-                        Save( destination, false );
+                    using (var destination = File.Create(thisFilePath))
+                        Save(destination, false);
 
                     fileStream.Close();
 
-                    File.Delete( filePath );
-                    File.Move( thisFilePath, filePath );
+                    File.Delete(filePath);
+                    File.Move(thisFilePath, filePath);
 
-                    stream = new FileStream( filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite );
-                    ownsStream = true;
+                    mStream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+                    mOwnsStream = true;
 
                     return;
                 }
             }
 
-            Save( new FileStream( filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite ), false );
+            Save(new FileStream(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite), false);
+        }
+
+        protected virtual ISection GetSectionInstanceForWriting()
+        {
+            var type = GetType();
+
+            if (!SectionRegistry.SingleSectionInfosByDataType.TryGetValue(type, out var sectionInfo))
+                throw new NotImplementedException();
+
+            return sectionInfo.Create(SectionMode.Write, this);
         }
 
         public void Dispose()
         {
-            Dispose( true );
-            GC.SuppressFinalize( this );
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
         /// Cleans up resources used by the object.
         /// </summary>
         /// <param name="disposing">Whether or not the managed objects are going to be disposed.</param>
-        protected virtual void Dispose( bool disposing )
+        protected virtual void Dispose(bool disposing)
         {
-            if ( disposing )
-            {
-                if ( Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) && ownsStream )
-                {
-                    stream?.Dispose();
-                }
-            }
+            if (disposing && Flags.HasFlag(BinaryFileFlags.UsesSourceStream) && mOwnsStream)
+                mStream?.Dispose();
         }
 
         ~BinaryFile()
         {
-            Dispose( false );
+            Dispose(false);
         }
 
-        public abstract void Read( EndianBinaryReader reader, Section section = null );
-        public abstract void Write( EndianBinaryWriter writer, Section section = null );
+        public abstract void Read(EndianBinaryReader reader, ISection section = null);
+        public abstract void Write(EndianBinaryWriter writer, ISection section = null);
     }
 }

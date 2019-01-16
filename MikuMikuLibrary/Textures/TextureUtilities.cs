@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace MikuMikuLibrary.Textures
 {
-    public partial class Texture
+    public class TextureUtilities
     {
         public static void RenameTexture( Texture texture, TextureSet textures, TextureDatabase textureDatabase = null )
         {
@@ -66,7 +66,7 @@ namespace MikuMikuLibrary.Textures
                 model.TextureSet.Textures[ i ].ID = newTextureIDs[ i ];
             }
 
-            foreach ( var materialTexture in model.Meshes.SelectMany( x => x.Materials ).SelectMany( x => x.EnumerateMaterialTextures() ) )
+            foreach ( var materialTexture in model.Meshes.SelectMany( x => x.Materials ).SelectMany( x => x.MaterialTextures ) )
             {
                 if ( dictionary.TryGetValue( materialTexture.TextureID, out int id ) )
                     materialTexture.TextureID = id;

@@ -9,10 +9,7 @@ namespace MikuMikuLibrary.Models
         public int ID { get; set; }
         public Matrix4x4 Matrix { get; set; }
 
-        public bool IsEx
-        {
-            get { return ( ID & 0x8000 ) != 0; }
-        }
+        public bool IsEx => ( ID & 0x8000 ) != 0;
 
         public Bone()
         {
@@ -24,16 +21,16 @@ namespace MikuMikuLibrary.Models
     {
         public static readonly BoneWeight Empty = new BoneWeight
         {
-            Index1 = -1, Index2 = -1, Index3 = -1, Index4 = -1,
+            Index1 = -1,
+            Index2 = -1,
+            Index3 = -1,
+            Index4 = -1,
         };
 
         public float Weight1, Weight2, Weight3, Weight4;
         public int Index1, Index2, Index3, Index4;
 
-        public bool IsValid
-        {
-            get { return ( Weight1 + Weight2 + Weight3 + Weight4 ) == 1.0f; }
-        }
+        public bool IsValid => ( Weight1 + Weight2 + Weight3 + Weight4 ) == 1.0f;
 
         public void Validate()
         {

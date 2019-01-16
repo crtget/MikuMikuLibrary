@@ -10,14 +10,12 @@ namespace MikuMikuLibrary.Textures
 {
     public class TextureSet : BinaryFile
     {
-        public override BinaryFileFlags Flags
-        {
-            get { return BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionFormat; }
-        }
+        public override BinaryFileFlags Flags =>
+            BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionedVersion;
 
         public List<Texture> Textures { get; }
 
-        public override void Read( EndianBinaryReader reader, Section section = null )
+        public override void Read( EndianBinaryReader reader, ISection section = null )
         {
             reader.PushBaseOffset();
 
@@ -37,7 +35,7 @@ namespace MikuMikuLibrary.Textures
             Textures.Capacity = textureCount;
             for ( int i = 0; i < textureCount; i++ )
             {
-                reader.ReadAtOffsetAndSeekBack( reader.ReadUInt32(), () =>
+                reader.ReadOffset( () =>
                 {
                     Textures.Add( new Texture( reader ) );
                 } );
@@ -46,7 +44,7 @@ namespace MikuMikuLibrary.Textures
             reader.PopBaseOffset();
         }
 
-        public override void Write( EndianBinaryWriter writer, Section section = null )
+        public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             writer.PushBaseOffset();
 
@@ -56,7 +54,7 @@ namespace MikuMikuLibrary.Textures
 
             foreach ( var texture in Textures )
             {
-                writer.EnqueueOffsetWrite( 4, AlignmentKind.Left, () =>
+                writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () =>
                 {
                     texture.Write( writer );
                 } );
@@ -64,6 +62,8 @@ namespace MikuMikuLibrary.Textures
 
             writer.PopBaseOffset();
         }
+
+        protected override ISection GetSectionInstanceForWriting() => new TextureSetSection( SectionMode.Write, this );
 
         public override void Load( string filePath )
         {
@@ -117,14 +117,7 @@ namespace MikuMikuLibrary.Textures
                 textureDatabase.Save( Path.ChangeExtension( filePath, "txi" ) );
             }
 
-            // Here's a little cheat, the files are always little endian, no matter what you want
-            // So we pass the endianness to the TXI, but write in little endian for the set
-            var endianness = Endianness;
-            Endianness = Endianness.LittleEndian;
-
             base.Save( filePath );
-
-            Endianness = endianness;
         }
 
         public TextureSet()

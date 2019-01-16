@@ -57,7 +57,7 @@ namespace MikuMikuLibrary.Aet
         internal void Write(EndianBinaryWriter writer)
         {
             writer.Write(KeyFrames.Count);
-            writer.EnqueueOffsetWrite(() =>
+            writer.ScheduleWriteOffset(() =>
             {
                 if (KeyFrames.Count == 1)
                 {

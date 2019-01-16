@@ -7,27 +7,18 @@ namespace MikuMikuModel.FormatModules
 {
     public class TextureFormatModule : FormatModule<Texture>
     {
-        public override FormatModuleFlags Flags
-        {
-            get { return FormatModuleFlags.Import | FormatModuleFlags.Export; }
-        }
+        public override FormatModuleFlags Flags =>
+            FormatModuleFlags.Import | FormatModuleFlags.Export;
 
-        public override string Name
-        {
-            get { return "Texture"; }
-        }
-
-        public override string[] Extensions
-        {
-            get { return new[] { "dds" }; }
-        }
+        public override string Name => "Texture";
+        public override string[] Extensions => new[] { "dds" };
 
         protected override bool CanImportCore( Stream source, string fileName )
         {
             var sig = new byte[ 4 ];
             source.Read( sig, 0, 4 );
 
-            return BitConverter.ToInt32( sig, 0 ) == DDSHeader.Magic;
+            return BitConverter.ToInt32( sig, 0 ) == DDSHeader.MAGIC;
         }
 
         protected override void ExportCore( Texture obj, Stream destination, string fileName )

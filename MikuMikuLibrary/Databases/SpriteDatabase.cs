@@ -38,14 +38,12 @@ namespace MikuMikuLibrary.Databases
 
     public class SpriteDatabase : BinaryFile
     {
-        public override BinaryFileFlags Flags
-        {
-            get { return BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionFormat; }
-        }
+        public override BinaryFileFlags Flags =>
+            BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionedVersion;
 
         public List<SpriteSetEntry> SpriteSets { get; }
 
-        public override void Read( EndianBinaryReader reader, Section section = null )
+        public override void Read( EndianBinaryReader reader, ISection section = null )
         {
             int spriteSetCount = reader.ReadInt32();
             uint spriteSetsOffset = reader.ReadUInt32();
@@ -109,10 +107,10 @@ namespace MikuMikuLibrary.Databases
             } );
         }
 
-        public override void Write( EndianBinaryWriter writer, Section section = null )
+        public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             writer.Write( SpriteSets.Count );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 for ( int i = 0; i < SpriteSets.Count; i++ )
                 {
@@ -125,7 +123,7 @@ namespace MikuMikuLibrary.Databases
                 }
             } );
             writer.Write( SpriteSets.Sum( x => x.Sprites.Count + x.Textures.Count ) );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 for ( int i = 0; i < SpriteSets.Count; i++ )
                 {

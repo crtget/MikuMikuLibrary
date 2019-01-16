@@ -26,7 +26,7 @@ namespace MikuMikuLibrary.Aet
         {
             long thisOffset = reader.Position;
 
-            string name = reader.ReadStringPtr(StringBinaryFormat.NullTerminated);
+            string name = reader.ReadStringOffset(StringBinaryFormat.NullTerminated);
             int id = reader.ReadInt32();
 
             return new SpriteEntry(name, id)

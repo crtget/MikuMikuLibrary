@@ -30,14 +30,12 @@ namespace MikuMikuLibrary.Databases
 
     public class AetDatabase : BinaryFile
     {
-        public override BinaryFileFlags Flags
-        {
-            get { return BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionFormat; }
-        }
+        public override BinaryFileFlags Flags =>
+            BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionedVersion;
 
         public List<AetSetEntry> AetSets { get; }
 
-        public override void Read( EndianBinaryReader reader, Section section = null )
+        public override void Read( EndianBinaryReader reader, ISection section = null )
         {
             int aetSetCount = reader.ReadInt32();
             uint aetSetsOffset = reader.ReadUInt32();
@@ -52,8 +50,8 @@ namespace MikuMikuLibrary.Databases
                     ushort id = reader.ReadUInt16();
                     reader.SeekCurrent( 2 );
 
-                    string name = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
-                    string fileName = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+                    string name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
+                    string fileName = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
 
                     ushort index = reader.ReadUInt16();
                     reader.SeekCurrent( 2 );
@@ -79,7 +77,7 @@ namespace MikuMikuLibrary.Databases
                     ushort id = reader.ReadUInt16();
                     reader.SeekCurrent( 2 );
 
-                    string name = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+                    string name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
 
                     ushort index = reader.ReadUInt16();
                     ushort setIndex = reader.ReadUInt16();
@@ -96,10 +94,10 @@ namespace MikuMikuLibrary.Databases
             } );
         }
 
-        public override void Write( EndianBinaryWriter writer, Section section = null )
+        public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             writer.Write( AetSets.Count );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 for ( int i = 0; i < AetSets.Count; i++ )
                 {
@@ -115,7 +113,7 @@ namespace MikuMikuLibrary.Databases
                 }
             } );
             writer.Write( AetSets.Sum( x => x.Aets.Count ) );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 for ( int i = 0; i < AetSets.Count; i++ )
                 {

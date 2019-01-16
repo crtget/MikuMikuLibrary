@@ -22,7 +22,7 @@ namespace MikuMikuLibrary.Aet
         internal static AetTimeEvent Read(EndianBinaryReader reader)
         {
             float frame = reader.ReadSingle();
-            string name = reader.ReadStringPtr(StringBinaryFormat.NullTerminated);
+            string name = reader.ReadStringOffset(StringBinaryFormat.NullTerminated);
 
             return new AetTimeEvent(frame, name);
         }

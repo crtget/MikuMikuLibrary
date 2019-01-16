@@ -1,6 +1,7 @@
 ﻿using MikuMikuLibrary.IO;
 using MikuMikuLibrary.IO.Common;
 using MikuMikuLibrary.IO.Sections;
+using MikuMikuLibrary.Maths;
 using System;
 using System.Collections.Generic;
 
@@ -24,7 +25,7 @@ namespace MikuMikuLibrary.Models
 
     public class IndexTable
     {
-        public static int ByteSize( BinaryFormat format )
+        public static int GetByteSize( BinaryFormat format )
         {
             switch ( format )
             {
@@ -73,6 +74,8 @@ namespace MikuMikuLibrary.Models
                 BoundingBox = reader.ReadBoundingBox();
                 Field00 = reader.ReadInt32();
             }
+            else
+                BoundingBox = BoundingSphere.ToBoundingBox();
 
             reader.ReadAtOffsetIf( field00 == 4, boneIndicesOffset, () =>
             {
@@ -88,8 +91,10 @@ namespace MikuMikuLibrary.Models
             }
             else
             {
-                section.IndexData.Reader.SeekBegin( indicesOffset );
-                Indices = section.IndexData.Reader.ReadUInt16s( indexCount );
+                var indexReader = section.IndexData.Reader;
+
+                indexReader.SeekBegin( section.IndexData.DataOffset + indicesOffset );
+                Indices = indexReader.ReadUInt16s( indexCount );
             }
         }
 
@@ -100,7 +105,7 @@ namespace MikuMikuLibrary.Models
             writer.Write( MaterialIndex );
             writer.WriteNulls( 8 );
             writer.Write( BoneIndices != null ? BoneIndices.Length : 0 );
-            writer.EnqueueOffsetWriteIf( BoneIndices != null, 4, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffsetIf( BoneIndices != null, 4, AlignmentMode.Left, () =>
             {
                 writer.Write( BoneIndices );
             } );
@@ -112,13 +117,8 @@ namespace MikuMikuLibrary.Models
             // Modern Format
             if ( section != null )
             {
-                section.IndexData.Writer.WriteAlignmentPadding( 4 );
-                writer.Write( ( uint )section.IndexData.Data.Position );
-
-                // Write the indices to the index data
-                section.IndexData.Writer.Write( Indices );
-
-                writer.WriteNulls( 20 );
+                writer.Write( ( uint )section.IndexData.AddIndices( Indices ) );
+                writer.WriteNulls( section.Format == BinaryFormat.X ? 24 : 20 );
                 writer.Write( BoundingBox );
                 writer.Write( Field00 );
                 writer.Write( 0 );
@@ -126,7 +126,7 @@ namespace MikuMikuLibrary.Models
 
             else
             {
-                writer.EnqueueOffsetWrite( 4, AlignmentKind.Left, () =>
+                writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () =>
                 {
                     writer.Write( Indices );
                 } );

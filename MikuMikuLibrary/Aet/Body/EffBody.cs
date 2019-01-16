@@ -65,7 +65,7 @@ namespace MikuMikuLibrary.Aet.Body
             writer.Write(TimeEvents.Count);
             if (TimeEvents.Count > 0)
             {
-                writer.EnqueueOffsetWrite(() =>
+                writer.ScheduleWriteOffset(() =>
                 {
                     foreach (var timeEvent in TimeEvents)
                         timeEvent.Write(writer);
@@ -76,7 +76,7 @@ namespace MikuMikuLibrary.Aet.Body
                 writer.Write(0x0);
             }
 
-            writer.EnqueueOffsetWrite(() =>
+            writer.ScheduleWriteOffset(() =>
             {
                 AnimationData.Write(writer);
             });

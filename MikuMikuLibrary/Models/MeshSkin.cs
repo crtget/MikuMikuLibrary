@@ -1,4 +1,5 @@
-﻿using MikuMikuLibrary.IO.Common;
+﻿using MikuMikuLibrary.IO;
+using MikuMikuLibrary.IO.Common;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,7 +7,7 @@ namespace MikuMikuLibrary.Models
 {
     public class MeshSkin
     {
-        public const int ByteSize = 0x40;
+        public const int BYTE_SIZE = 0x40;
 
         public List<Bone> Bones { get; }
         public MeshExData ExData { get; set; }
@@ -40,16 +41,16 @@ namespace MikuMikuLibrary.Models
             reader.ReadAtOffset( boneNamesOffset, () =>
             {
                 foreach ( var bone in Bones )
-                    bone.Name = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+                    bone.Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             } );
 
-            reader.ReadAtOffsetIfNotZero( meshExDataOffset, () =>
+            reader.ReadAtOffset( meshExDataOffset, () =>
             {
                 ExData = new MeshExData();
                 ExData.Read( reader );
             } );
 
-            reader.ReadAtOffsetIfNotZero( boneParentIDsOffset, () =>
+            reader.ReadAtOffset( boneParentIDsOffset, () =>
             {
                 foreach ( var bone in Bones )
                     bone.ParentID = reader.ReadInt32();
@@ -58,29 +59,29 @@ namespace MikuMikuLibrary.Models
 
         internal void Write( EndianBinaryWriter writer )
         {
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Center, () =>
             {
                 foreach ( var bone in Bones )
                     writer.Write( bone.ID );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Center, () =>
             {
                 foreach ( var bone in Bones )
                     writer.Write( bone.Matrix );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Center, () =>
             {
                 foreach ( var bone in Bones )
                     writer.AddStringToStringTable( bone.Name );
             } );
-            writer.EnqueueOffsetWriteIf( ExData != null, 16, AlignmentKind.Center, () => ExData.Write( writer ) );
+            writer.ScheduleWriteOffsetIf( ExData != null, 16, AlignmentMode.Center, () => ExData.Write( writer ) );
             writer.Write( Bones.Count );
-            writer.EnqueueOffsetWriteIf( Bones.Any( x => x.ParentID != -1 ), 16, AlignmentKind.Center, () =>
+            writer.ScheduleWriteOffsetIf( Bones.Any( x => x.ParentID != -1 ), 16, AlignmentMode.Center, () =>
             {
                 foreach ( var bone in Bones )
                     writer.Write( bone.ParentID );
             } );
-            writer.WriteNulls( 40 );
+            writer.WriteNulls( writer.AddressSpace == AddressSpace.Int64 ? 32 : 40 );
         }
 
         public MeshSkin()

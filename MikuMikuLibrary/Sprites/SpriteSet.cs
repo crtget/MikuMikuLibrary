@@ -8,27 +8,28 @@ namespace MikuMikuLibrary.Sprites
 {
     public class SpriteSet : BinaryFile
     {
-        public override BinaryFileFlags Flags
-        {
-            get { return BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionFormat; }
-        }
+        public override BinaryFileFlags Flags =>
+            BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionedVersion;
 
         public List<Sprite> Sprites { get; }
 
-        public TextureSet TextureSet { get; }
+        public TextureSet TextureSet { get; internal set; }
 
-        public override void Read( EndianBinaryReader reader, Section section = null )
+        public override void Read( EndianBinaryReader reader, ISection section = null )
         {
             int signature = reader.ReadInt32();
             uint texturesOffset = reader.ReadUInt32();
             int textureCount = reader.ReadInt32();
             int spriteCount = reader.ReadInt32();
-            uint spritesOffset = reader.ReadUInt32();
-            uint textureNamesOffset = reader.ReadUInt32();
-            uint spriteNamesOffset = reader.ReadUInt32();
-            uint spriteUnknownsOffset = reader.ReadUInt32();
+            long spritesOffset = reader.ReadOffset();
+            long textureNamesOffset = reader.ReadOffset();
+            long spriteNamesOffset = reader.ReadOffset();
+            long spriteUnknownsOffset = reader.ReadOffset();
 
-            reader.ReadAtOffset( texturesOffset, () => TextureSet.Load( reader.BaseStream, true ) );
+            reader.ReadAtOffsetIf( section == null, texturesOffset, () =>
+            {
+                TextureSet.Load( reader.BaseStream, true );
+            } );
 
             Sprites.Capacity = spriteCount;
             reader.ReadAtOffset( spritesOffset, () =>
@@ -48,13 +49,13 @@ namespace MikuMikuLibrary.Sprites
             reader.ReadAtOffset( textureNamesOffset, () =>
             {
                 foreach ( var texture in TextureSet.Textures )
-                    texture.Name = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+                    texture.Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             } );
 
             reader.ReadAtOffset( spriteNamesOffset, () =>
             {
                 foreach ( var sprite in Sprites )
-                    sprite.Name = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+                    sprite.Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             } );
 
             reader.ReadAtOffset( spriteUnknownsOffset, () =>
@@ -64,35 +65,35 @@ namespace MikuMikuLibrary.Sprites
             } );
         }
 
-        public override void Write( EndianBinaryWriter writer, Section section = null )
+        public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             writer.Write( 0 );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () => TextureSet.Save( writer.BaseStream, true ) );
+            writer.ScheduleWriteOffsetIf( section == null, 16, AlignmentMode.Left, () => TextureSet.Save( writer.BaseStream, true ) );
             writer.Write( TextureSet.Textures.Count );
             writer.Write( Sprites.Count );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var sprite in Sprites )
                     sprite.WriteFirst( writer );
 
                 writer.PopStringTablesReversed();
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var texture in TextureSet.Textures )
                     writer.AddStringToStringTable( texture.Name );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var sprite in Sprites )
                     writer.AddStringToStringTable( sprite.Name );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var sprite in Sprites )
                     sprite.WriteSecond( writer );
             } );
-            writer.DoEnqueuedOffsetWritesReversed();
+            writer.PerformScheduledWritesReversed();
         }
 
         public SpriteSet()

@@ -1,5 +1,4 @@
-﻿using MikuMikuLibrary.Sprites;
-using MikuMikuLibrary.Textures;
+﻿using MikuMikuLibrary.Textures;
 using MikuMikuModel.GUI.Forms.Style;
 using System;
 using System.Drawing;
@@ -9,138 +8,96 @@ namespace MikuMikuModel.GUI.Controls
 {
     public partial class TextureViewControl : UserControl
     {
-        private static TextureViewControl instance;
+        private static TextureViewControl sInstance;
 
-        public static TextureViewControl Instance
-        {
-            get
-            {
-                if (instance == null)
-                    instance = new TextureViewControl();
-
-                return instance;
-            }
-        }
+        public static TextureViewControl Instance => sInstance ?? (sInstance = new TextureViewControl());
 
         public static void DisposeInstance()
         {
-            instance?.Dispose();
+            sInstance?.Dispose();
         }
 
-        private Texture texture;
-        private Sprite sprite;
-
-        private Bitmap[,] bitmaps;
-        private Bitmap ycbcrBitmap;
-
-        private int mipMapIndex;
-        private int levelIndex;
+        private Texture mTexture;
+        private Bitmap[,] mBitmaps;
+        private Bitmap mYcbcrBitmap;
+        private int mMipMapIndex;
+        private int mLevelIndex;
 
         public int CurrentMipMapIndex
         {
-            get { return mipMapIndex; }
+            get => mMipMapIndex;
             set
             {
-                if (texture.IsYCbCr)
+                if (mTexture.IsYCbCr)
                     return;
 
-                value = Math.Max(0, Math.Min(value, texture.MipMapCount - 1));
+                value = Math.Max(0, Math.Min(value, mTexture.MipMapCount - 1));
 
-                if (value == mipMapIndex)
+                if (value == mMipMapIndex)
                     return;
 
-                mipMapIndex = value;
-                SetAllTextureInfoText();
+                mMipMapIndex = value;
+                SetAll();
             }
         }
 
         public int CurrentLevelIndex
         {
-            get { return levelIndex; }
+            get => mLevelIndex;
             set
             {
-                if (texture.IsYCbCr)
+                if (mTexture.IsYCbCr)
                     return;
 
-                value = Math.Max(0, Math.Min(value, texture.Depth - 1));
+                value = Math.Max(0, Math.Min(value, mTexture.Depth - 1));
 
-                if (value == levelIndex)
+                if (value == mLevelIndex)
                     return;
 
-                levelIndex = value;
-                SetAllTextureInfoText();
-            }
-        }
-
-        private void DecodeAndSetBitmaps()
-        {
-            if (texture.IsYCbCr)
-            {
-                ycbcrBitmap = TextureDecoder.Decode(texture);
-            }
-            else
-            {
-                bitmaps = new Bitmap[texture.Depth, texture.MipMapCount];
-                for (int i = 0; i < texture.Depth; i++)
-                    for (int j = 0; j < texture.MipMapCount; j++)
-                        bitmaps[i, j] = TextureDecoder.Decode(texture[i, j]);
+                mLevelIndex = value;
+                SetAll();
             }
         }
 
         private void SetFormatText()
         {
-            if (texture.IsYCbCr)
-                formatLabel.Text = "Format: YCbCr";
+            if (mTexture.IsYCbCr)
+                mFormatLabel.Text = "Format: YCbCr";
             else
-                formatLabel.Text = $"Format: {Enum.GetName(typeof(TextureFormat), texture.Format)}";
+                mFormatLabel.Text = $"Format: {Enum.GetName(typeof(TextureFormat), mTexture.Format)}";
         }
 
         private void SetSizeText()
         {
-            if (texture.IsYCbCr)
-                sizeLabel.Text = $"Size: {texture.Width}x{texture.Height}";
+            if (mTexture.IsYCbCr)
+                mSizeLabel.Text = $"Size: {mTexture.Width}x{mTexture.Height}";
             else
-                sizeLabel.Text = $"Size: {texture[levelIndex, mipMapIndex].Width}x{texture[levelIndex, mipMapIndex].Height}";
+                mSizeLabel.Text = $"Size: {mTexture[mLevelIndex, mMipMapIndex].Width}x{mTexture[mLevelIndex, mMipMapIndex].Height}";
         }
 
         private void SetMipMapText()
         {
-            if (texture.IsYCbCr)
-                mipMapLabel.Text = "MipMap: 1/1";
+            if (mTexture.IsYCbCr)
+                mMipMapLabel.Text = "MipMap: 1/1";
             else
-                mipMapLabel.Text = $"MipMap: {mipMapIndex + 1}/{texture.MipMapCount}";
+                mMipMapLabel.Text = $"MipMap: {mMipMapIndex + 1}/{mTexture.MipMapCount}";
         }
 
         private void SetLevelText()
         {
-            if (texture.IsYCbCr)
-                levelLabel.Text = "Level: 1/1";
+            if (mTexture.IsYCbCr)
+                mLevelLabel.Text = "Level: 1/1";
             else
-                levelLabel.Text = $"Level: {levelIndex + 1}/{texture.Depth}";
+                mLevelLabel.Text = $"Level: {mLevelIndex + 1}/{mTexture.Depth}";
         }
 
-        private void SetControlTextureBackground()
+        private void SetControlBackground()
         {
-            var bitmap = texture.IsYCbCr ? ycbcrBitmap : bitmaps[levelIndex, mipMapIndex];
-            bitmap.RotateFlip(RotateFlipType.Rotate180FlipX);
+            if (mTexture.IsYCbCr)
+                BackgroundImage = mYcbcrBitmap;
+            else
+                BackgroundImage = mBitmaps[mLevelIndex, mMipMapIndex];
 
-            BackgroundImage = bitmap;
-
-            SetBackgroundImageLayout();
-        }
-
-        private void SetControlSpriteBackground()
-        {
-            var bitmap = texture.IsYCbCr ? ycbcrBitmap : bitmaps[levelIndex, mipMapIndex];
-            bitmap.RotateFlip(RotateFlipType.Rotate180FlipX);
-
-            BackgroundImage = SpriteCropper.Crop(bitmap, sprite.GetSourceRectangle());
-
-            SetBackgroundImageLayout();
-        }
-
-        private void SetBackgroundImageLayout()
-        {
             if (ClientSize.Width < BackgroundImage.Width || ClientSize.Height < BackgroundImage.Height)
                 BackgroundImageLayout = ImageLayout.Zoom;
             else
@@ -149,53 +106,44 @@ namespace MikuMikuModel.GUI.Controls
             Refresh();
         }
 
-        private void SetAllTextureInfoText()
+        private void SetAll()
         {
             SetFormatText();
             SetSizeText();
             SetMipMapText();
             SetLevelText();
+            SetControlBackground();
         }
 
         public void SetTexture(Texture texture)
         {
             DisposeBitmaps();
 
-            this.texture = texture;
-            sprite = null;
+            mTexture = texture;
 
-            DecodeAndSetBitmaps();
+            if (texture.IsYCbCr)
+                mYcbcrBitmap = TextureDecoder.Decode(texture);
 
-            SetAllTextureInfoText();
-            SetControlTextureBackground();
-        }
+            else
+            {
+                mBitmaps = new Bitmap[texture.Depth, texture.MipMapCount];
+                for (int i = 0; i < texture.Depth; i++)
+                    for (int j = 0; j < texture.MipMapCount; j++)
+                        mBitmaps[i, j] = TextureDecoder.Decode(texture[i, j]);
+            }
 
-        public void SetSprite(Sprite sprite)
-        {
-            // This is not the most efficient way of doing this
-            // so we might wanna use an openGL control instead 
-            // which we'll have to do anyway if we want to render aets cirComfy
-
-            DisposeBitmaps();
-
-            texture = sprite.ParentTexture;
-            this.sprite = sprite;
-
-            DecodeAndSetBitmaps();
-
-            SetAllTextureInfoText();
-            SetControlSpriteBackground();
+            SetAll();
         }
 
         private void DisposeBitmaps()
         {
-            if (bitmaps != null)
+            if (mBitmaps != null)
             {
-                foreach (var bitmap in bitmaps)
+                foreach (var bitmap in mBitmaps)
                     bitmap.Dispose();
             }
 
-            ycbcrBitmap?.Dispose();
+            mYcbcrBitmap?.Dispose();
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -222,6 +170,7 @@ namespace MikuMikuModel.GUI.Controls
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
+
         /// <summary> 
         /// Clean up any resources being used.
         /// </summary>
@@ -230,7 +179,7 @@ namespace MikuMikuModel.GUI.Controls
         {
             if (disposing)
             {
-                components?.Dispose();
+                mComponents?.Dispose();
                 DisposeBitmaps();
             }
             base.Dispose(disposing);
@@ -245,8 +194,8 @@ namespace MikuMikuModel.GUI.Controls
         {
             DarkModeColorTable colorTable = DarkModeColorTable.Instance;
 
-            statusStrip.BackColor = colorTable.BorderColor;
-            statusStrip.ForeColor = colorTable.ForeColor;
+            mStatusStrip.BackColor = colorTable.BorderColor;
+            mStatusStrip.ForeColor = colorTable.ForeColor;
         }
     }
 }

@@ -27,17 +27,17 @@ namespace MikuMikuLibrary.Databases
             Name = reader.ReadStringAtOffset( nameOffset, StringBinaryFormat.NullTerminated );
 
             Motions.Capacity = motionCount;
-            reader.ReadAtOffsetAndSeekBack( motionNameOffsetsOffset, () =>
+            reader.ReadAtOffset( motionNameOffsetsOffset, () =>
             {
                 for ( int i = 0; i < motionCount; i++ )
                 {
                     var motionEntry = new MotionEntry();
-                    motionEntry.Name = reader.ReadStringPtr( StringBinaryFormat.NullTerminated );
+                    motionEntry.Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
                     Motions.Add( motionEntry );
                 }
             } );
 
-            reader.ReadAtOffsetAndSeekBack( motionIDsOffset, () =>
+            reader.ReadAtOffset( motionIDsOffset, () =>
             {
                 foreach ( var motionEntry in Motions )
                     motionEntry.ID = reader.ReadInt32();
@@ -47,13 +47,13 @@ namespace MikuMikuLibrary.Databases
         internal void Write( EndianBinaryWriter writer )
         {
             writer.AddStringToStringTable( Name );
-            writer.EnqueueOffsetWrite( 4, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () =>
             {
                 foreach ( var motionEntry in Motions )
                     writer.AddStringToStringTable( motionEntry.Name );
             } );
             writer.Write( Motions.Count );
-            writer.EnqueueOffsetWrite( 4, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () =>
             {
                 foreach ( var motionEntry in Motions )
                     writer.Write( motionEntry.ID );
@@ -68,15 +68,12 @@ namespace MikuMikuLibrary.Databases
 
     public class MotionDatabase : BinaryFile
     {
-        public override BinaryFileFlags Flags
-        {
-            get { return BinaryFileFlags.Load | BinaryFileFlags.Save; }
-        }
+        public override BinaryFileFlags Flags => BinaryFileFlags.Load | BinaryFileFlags.Save;
 
         public List<MotionSetEntry> MotionSets { get; }
         public List<string> BoneNames { get; }
 
-        public override void Read( EndianBinaryReader reader, Section section = null )
+        public override void Read( EndianBinaryReader reader, ISection section = null )
         {
             int version = reader.ReadInt32();
             uint motionSetsOffset = reader.ReadUInt32();
@@ -106,25 +103,25 @@ namespace MikuMikuLibrary.Databases
             {
                 BoneNames.Capacity = boneNameCount;
                 for ( int i = 0; i < boneNameCount; i++ )
-                    BoneNames.Add( reader.ReadStringPtr( StringBinaryFormat.NullTerminated ) );
+                    BoneNames.Add( reader.ReadStringOffset( StringBinaryFormat.NullTerminated ) );
             } );
         }
 
-        public override void Write( EndianBinaryWriter writer, Section section = null )
+        public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             writer.Write( 1 );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var motionSetEntry in MotionSets )
                     motionSetEntry.Write( writer );
             } );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var motionSetEntry in MotionSets )
                     writer.Write( motionSetEntry.ID );
             } );
             writer.Write( MotionSets.Count );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var boneName in BoneNames )
                     writer.AddStringToStringTable( boneName );

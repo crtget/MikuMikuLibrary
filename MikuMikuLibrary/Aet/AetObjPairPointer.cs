@@ -45,7 +45,7 @@ namespace MikuMikuLibrary.Aet
 
             writer.Write(ReferencedObjectPair.AetObjects.Count);
 
-            writer.EnqueueOffsetWrite(() =>
+            writer.ScheduleWriteOffset(() =>
             {
                 AetObjPairOffset = (int)writer.Position;
                 ReferencedObjectPair.Write(writer, parentAet);

@@ -40,15 +40,13 @@ namespace MikuMikuLibrary.Databases
 
     public class ObjectDatabase : BinaryFile
     {
-        public override BinaryFileFlags Flags
-        {
-            get { return BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionFormat; }
-        }
+        public override BinaryFileFlags Flags =>
+            BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionedVersion;
 
         public List<ObjectEntry> Objects { get; }
         public int Unknown { get; set; }
 
-        public override void Read( EndianBinaryReader reader, Section section = null )
+        public override void Read( EndianBinaryReader reader, ISection section = null )
         {
             int objectCount = reader.ReadInt32();
             Unknown = reader.ReadInt32();
@@ -97,11 +95,11 @@ namespace MikuMikuLibrary.Databases
             } );
         }
 
-        public override void Write( EndianBinaryWriter writer, Section section = null )
+        public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             writer.Write( Objects.Count );
             writer.Write( Unknown );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var objectEntry in Objects )
                 {
@@ -115,7 +113,7 @@ namespace MikuMikuLibrary.Databases
                 }
             } );
             writer.Write( Objects.Sum( x => x.Meshes.Count ) );
-            writer.EnqueueOffsetWrite( 16, AlignmentKind.Left, () =>
+            writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var objectEntry in Objects )
                 {

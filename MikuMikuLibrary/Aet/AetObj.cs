@@ -27,7 +27,7 @@ namespace MikuMikuLibrary.Aet
         {
             ThisOffset = (int)reader.Position;
 
-            Name = reader.ReadStringPtr(StringBinaryFormat.NullTerminated);
+            Name = reader.ReadStringOffset(StringBinaryFormat.NullTerminated);
 
             FrameStartTime = reader.ReadSingle();
             FrameLoopDuration = reader.ReadSingle();
