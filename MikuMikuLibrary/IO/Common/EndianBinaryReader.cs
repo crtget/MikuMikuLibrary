@@ -261,16 +261,6 @@ namespace MikuMikuLibrary.IO.Common
             }
         }
 
-        public void ReadAtOffsetAndSeekBack(long offset, Action body)
-        {
-            long prePosition = Position;
-            {
-                SeekBegin(offset);
-                body.Invoke();
-            }
-            SeekBegin(prePosition);
-        }
-
         public sbyte[] ReadSBytes(int count)
         {
             sbyte[] array = new sbyte[count];

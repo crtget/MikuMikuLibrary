@@ -35,7 +35,7 @@ namespace MikuMikuLibrary.Aet.Body
                 TimeEvents = new List<AetTimeEvent>(timeEventsCount);
                 if (timeEventsOffset > 0 && timeEventsCount > 0)
                 {
-                    reader.ReadAtOffsetAndSeekBack(timeEventsOffset, () =>
+                    reader.ReadAtOffset(timeEventsOffset, () =>
                     {
                         for (int i = 0; i < timeEventsCount; i++)
                             TimeEvents.Add(AetTimeEvent.Read(reader));
@@ -45,7 +45,7 @@ namespace MikuMikuLibrary.Aet.Body
 
             AnimationDataOffset = reader.ReadInt32();
 
-            reader.ReadAtOffsetAndSeekBack(AnimationDataOffset, () =>
+            reader.ReadAtOffset(AnimationDataOffset, () =>
             {
                 AnimationData = AnimationData.Read(reader);
             });

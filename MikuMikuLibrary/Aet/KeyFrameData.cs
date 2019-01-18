@@ -21,7 +21,7 @@ namespace MikuMikuLibrary.Aet
 
             List<KeyFrame> keyFrames = new List<KeyFrame>(keyFrameCount);
 
-            reader.ReadAtOffsetAndSeekBack(keyFramesOffset, () =>
+            reader.ReadAtOffset(keyFramesOffset, () =>
             {
                 keyFrames = new List<KeyFrame>(keyFrameCount);
 

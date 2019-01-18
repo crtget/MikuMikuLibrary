@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using MikuMikuLibrary.Aet;
+﻿using MikuMikuLibrary.Aet;
 
 namespace MikuMikuModel.DataNodes.Aet
 {

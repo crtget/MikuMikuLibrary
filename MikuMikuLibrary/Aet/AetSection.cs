@@ -60,7 +60,7 @@ namespace MikuMikuLibrary.Aet
             int spriteMetadataTableSize = default(int);
             int spriteMetadataTableOffset = default(int);
 
-            reader.ReadAtOffsetAndSeekBack(ThisOffset, () =>
+            reader.ReadAtOffset(ThisOffset, () =>
             {
                 Name = reader.ReadStringOffset(StringBinaryFormat.NullTerminated);
 
@@ -81,7 +81,7 @@ namespace MikuMikuLibrary.Aet
                     int objPairCount = reader.ReadInt32();
                     int tableOffset = reader.ReadInt32();
 
-                    reader.ReadAtOffsetAndSeekBack(tableOffset, () =>
+                    reader.ReadAtOffset(tableOffset, () =>
                     {
                         AetObjPairPointerTable = new List<AetObjPairPointer>(objPairCount);
 

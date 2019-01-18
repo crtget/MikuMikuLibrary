@@ -34,7 +34,7 @@ namespace MikuMikuLibrary.Aet.Body
 
             AnimationDataOffset = reader.ReadInt32();
 
-            reader.ReadAtOffsetAndSeekBack(AnimationDataOffset, () =>
+            reader.ReadAtOffset(AnimationDataOffset, () =>
             {
                 AnimationData = AnimationData.Read(reader);
             });
