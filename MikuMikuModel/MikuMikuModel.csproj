@@ -22,7 +22,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>2</WarningLevel>
+    <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
@@ -94,6 +94,8 @@
     <Compile Include="DataNodes\MeshNode.cs" />
     <Compile Include="DataNodes\MeshSkinNode.cs" />
     <Compile Include="DataNodes\ModelNode.cs" />
+    <Compile Include="DataNodes\PvCommandNode.cs" />
+    <Compile Include="DataNodes\PvScriptNode.cs" />
     <Compile Include="DataNodes\ReferenceNode.cs" />
     <Compile Include="DataNodes\SpriteNode.cs" />
     <Compile Include="DataNodes\SpriteSetNode.cs" />
@@ -114,6 +116,7 @@
     <Compile Include="FormatModules\FormatModuleUtilities.cs" />
     <Compile Include="FormatModules\ModelFormatModule.cs" />
     <Compile Include="FormatModules\ObjectDatabaseFormatModule.cs" />
+    <Compile Include="FormatModules\PvScriptFormatModule.cs" />
     <Compile Include="FormatModules\SpriteSetFormatModule.cs" />
     <Compile Include="FormatModules\StreamFormatModule.cs" />
     <Compile Include="FormatModules\TextureDatabaseFormatModule.cs" />
@@ -134,6 +137,12 @@
     <Compile Include="GUI\Controls\ModelView\GLSubMesh.cs" />
     <Compile Include="GUI\Controls\ModelView\GLTexture.cs" />
     <Compile Include="GUI\Controls\ModelView\IGLDraw.cs" />
+    <Compile Include="GUI\Controls\PvScriptControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Controls\PvScriptControl.Designer.cs">
+      <DependentUpon>PvScriptControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="GUI\Controls\TextureViewControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -165,6 +174,9 @@
     <Compile Include="FormatModules\IFormatModule.cs" />
     <Compile Include="FormatModules\FormatModule.cs" />
     <Compile Include="FormatModules\FormatModuleRegistry.cs" />
+    <EmbeddedResource Include="GUI\Controls\PvScriptControl.resx">
+      <DependentUpon>PvScriptControl.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="GUI\Controls\TextureViewControl.resx">
       <DependentUpon>TextureViewControl.cs</DependentUpon>
     </EmbeddedResource>

@@ -21,7 +21,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <WarningLevel>2</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -111,6 +111,16 @@
     <Compile Include="Models\ModelImporter.cs" />
     <Compile Include="Models\SceneUtilities.cs" />
     <Compile Include="Models\TriangleStripUtilities.cs" />
+    <Compile Include="Scripts\FormatDescriptor.cs" />
+    <Compile Include="Scripts\CommandInfo.cs" />
+    <Compile Include="Scripts\Descriptors\DtDescriptor.cs" />
+    <Compile Include="Scripts\Descriptors\F2ndDescriptor.cs" />
+    <Compile Include="Scripts\Descriptors\FDescriptor.cs" />
+    <Compile Include="Scripts\Descriptors\FtDescriptor.cs" />
+    <Compile Include="Scripts\Descriptors\XDescriptor.cs" />
+    <Compile Include="Scripts\PvCommand.cs" />
+    <Compile Include="Scripts\PvScript.cs" />
+    <Compile Include="Scripts\ScriptUtilities.cs" />
     <Compile Include="Sprites\SpriteCropper.cs" />
     <Compile Include="Sprites\SpriteOrganizer.cs" />
     <Compile Include="Textures\DDS\DDSCodec.cs" />

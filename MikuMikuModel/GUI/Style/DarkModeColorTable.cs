@@ -26,6 +26,8 @@ namespace MikuMikuModel.GUI.Forms.Style
 
         public Color BackColor { get; } = Color.FromArgb(37, 37, 38);
 
+        public Color BaseBackColor { get; } = Color.FromArgb(30, 30, 30);
+
         public Color BorderColor { get; } = Color.FromArgb(45, 45, 48);
 
         public override Color ToolStripDropDownBackground { get; } = Color.FromArgb(27, 27, 28);
